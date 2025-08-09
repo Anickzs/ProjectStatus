@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Details - Project In Progress</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <div>
+                    <h2 class="sidebar-title">Project In Progress</h2>
+                    <p class="sidebar-subtitle">Dashboard</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation Menu -->
+        <nav class="nav-menu">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link" data-page="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-page="projects">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>Projects</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="tasks.html" class="nav-link" data-page="tasks">
+                        <i class="fas fa-tasks"></i>
+                        <span>Tasks</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="analytics">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper">
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Breadcrumb Navigation -->
+        <nav class="breadcrumb-nav">
+            <a href="index.html" class="breadcrumb-link">
+                <i class="fas fa-home"></i>
+                Dashboard
+            </a>
+            <span class="breadcrumb-separator">/</span>
+            <span class="breadcrumb-current">Project Details</span>
+        </nav>
+
+        <!-- Project Detail Header -->
+        <header class="project-detail-header">
+            <div class="project-header-left">
+                <div class="project-icon-large">
+                    <i class="fas fa-server" id="project-icon"></i>
+                </div>
+                <div class="project-title-section">
+                    <h1 class="project-title" id="project-title">Loading Project...</h1>
+                    <p class="project-subtitle" id="project-subtitle">Loading...</p>
+                </div>
+            </div>
+            
+            <div class="project-actions">
+                <button class="action-btn refresh-project-btn" title="Refresh Project Data (Ctrl+R)" onclick="projectDetail.refreshProjectData()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                </button>
+                <button class="action-btn edit-project-btn" title="Edit Project (Ctrl+E)">
+                    <i class="fas fa-pencil-alt"></i>
+                    Edit
+                </button>
+                <button class="action-btn delete-project-btn" title="Delete Project">
+                    <i class="fas fa-trash"></i>
+                    Delete
+                </button>
+                <button class="action-btn export-project-btn" title="Export Project">
+                    <i class="fas fa-download"></i>
+                    Export
+                </button>
+                <button class="action-btn share-project-btn" title="Share Project">
+                    <i class="fas fa-share-alt"></i>
+                    Share
+                </button>
+            </div>
+        </header>
+
+        <!-- Project Detail Grid -->
+        <div class="project-detail-grid">
+            <!-- Project Overview Section -->
+            <section class="detail-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-info-circle"></i> Project Overview</h3>
+                </div>
+                <div class="project-description-large" id="project-description">
+                    Loading project description...
+                </div>
+                
+                <div class="project-meta-grid">
+                    <div class="meta-item">
+                        <span class="meta-label">Status</span>
+                        <span class="meta-value" id="project-status">Loading...</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Progress</span>
+                        <div class="progress-indicator-large" id="project-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%"></div>
+                            </div>
+                            <span class="progress-text">0% Complete</span>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Phase</span>
+                        <span class="meta-value" id="project-phase">Loading...</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Last Updated</span>
+                        <span class="meta-value" id="last-updated">Loading...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Task Management Section -->
+            <section class="detail-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-tasks"></i> Task Management</h3>
+                    <button class="add-task-btn" title="Add New Task">
+                        <i class="fas fa-plus"></i>
+                        Add Task
+                    </button>
+                </div>
+                
+                <div class="task-categories">
+                    <div class="task-category completed">
+                        <div class="category-header collapsible" data-target="completed-tasks">
+                            <h4><i class="fas fa-check-circle"></i> Completed Tasks</h4>
+                            <i class="fas fa-chevron-down collapse-icon"></i>
+                        </div>
+                        <ul class="task-list" id="completed-tasks">
+                            <li class="task-item completed">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Loading completed tasks...</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="task-category in-progress">
+                        <div class="category-header collapsible" data-target="in-progress-tasks">
+                            <h4><i class="fas fa-clock"></i> In Progress</h4>
+                            <i class="fas fa-chevron-down collapse-icon"></i>
+                        </div>
+                        <ul class="task-list" id="in-progress-tasks">
+                            <li class="task-item in-progress">
+                                <i class="fas fa-clock"></i>
+                                <span>Loading in-progress tasks...</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="task-category pending">
+                        <div class="category-header collapsible" data-target="pending-tasks">
+                            <h4><i class="fas fa-hourglass-start"></i> Pending Tasks</h4>
+                            <i class="fas fa-chevron-down collapse-icon"></i>
+                        </div>
+                        <ul class="task-list" id="pending-tasks">
+                            <li class="task-item pending">
+                                <i class="fas fa-hourglass-start"></i>
+                                <span>Loading pending tasks...</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- File Management Section -->
+            <section class="detail-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-folder"></i> Files & Documents</h3>
+                    <button class="upload-btn" title="Upload Files">
+                        <i class="fas fa-upload"></i>
+                        Upload Files
+                    </button>
+                </div>
+                
+                <div class="file-categories">
+                    <div class="file-category">
+                        <h4>Project Files</h4>
+                        <ul class="file-list" id="project-files">
+                            <li class="file-item">
+                                <i class="fas fa-file"></i>
+                                <span>Loading project files...</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+
+
+            <!-- Timeline Section -->
+            <section class="detail-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-history"></i> Project Timeline</h3>
+                </div>
+                
+                <div class="timeline" id="project-timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>Loading timeline...</h4>
+                            <p>Loading project history...</p>
+                            <span class="timeline-date">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Activity Log Section -->
+            <section class="detail-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-stream"></i> Recent Activity</h3>
+                    <button class="toggle-activity-btn" title="Toggle Activity View">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                
+                <div class="activity-log" id="activity-log">
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-info"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p>Loading recent activity...</p>
+                            <span class="activity-time">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div class="modal-overlay" id="edit-project-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Project</h3>
+                <button class="modal-close" id="close-edit-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-project-form">
+                    <div class="form-group">
+                        <label for="edit-project-name">Project Name</label>
+                        <input type="text" id="edit-project-name" name="projectName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-project-description">Description</label>
+                        <textarea id="edit-project-description" name="description" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-project-status">Status</label>
+                            <select id="edit-project-status" name="status" required>
+                                <option value="pending">Pending</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="review">Review</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-project-phase">Phase</label>
+                            <input type="text" id="edit-project-phase" name="phase" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-project-progress">Progress (%)</label>
+                        <input type="number" id="edit-project-progress" name="progress" min="0" max="100" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancel-edit">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="edit-project-form">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal-overlay" id="add-task-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Task</h3>
+                <button class="modal-close" id="close-add-task-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="add-task-form">
+                    <div class="form-group">
+                        <label for="task-title">Task Title</label>
+                        <input type="text" id="task-title" name="title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="task-description">Description</label>
+                        <textarea id="task-description" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-priority">Priority</label>
+                            <select id="task-priority" name="priority" required>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="task-status">Status</label>
+                            <select id="task-status" name="status" required>
+                                <option value="pending">Pending</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancel-add-task">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="add-task-form">Add Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload Modal -->
+    <div class="modal-overlay" id="file-upload-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Files</h3>
+                <button class="modal-close" id="close-file-upload-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="file-upload-form">
+                    <div class="form-group">
+                        <label for="file-upload">Select Files</label>
+                        <input type="file" id="file-upload" name="files" multiple accept="*/*" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="file-description">Description (Optional)</label>
+                        <textarea id="file-description" name="description" rows="2" placeholder="Brief description of the files..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancel-file-upload">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="file-upload-form">Upload Files</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="cursor-agent-mock.js"></script>
+    <script src="modules/ProjectDataManager.js"></script>
+    <script src="project-detail.js"></script>
+    <script>
+        // Initialize the ProjectDetailManager when the page loads
+        console.log('=== HTML Script Loading ===');
+        console.log('project-detail.js loaded, waiting for DOM...');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== DOM Content Loaded ===');
+            console.log('Project detail page loaded, initializing ProjectDetailManager...');
+            
+            try {
+                window.projectDetail = new ProjectDetailManager();
+                console.log('ProjectDetailManager created successfully:', window.projectDetail);
+            } catch (error) {
+                console.error('Failed to create ProjectDetailManager:', error);
+                // Show error to user
+                document.body.innerHTML = `
+                    <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
+                        <h2>Error Loading Project Details</h2>
+                        <p>There was an issue loading the project details. Please check the console for more information.</p>
+                        <button onclick="window.location.href='index.html'" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Return to Dashboard</button>
+                    </div>
+                `;
+            }
+        });
+        
+        // Also log when the script runs
+        console.log('HTML script executed, ProjectDetailManager class available:', typeof ProjectDetailManager);
+    </script>
+</body>
+</html>
+
