@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Data Manager Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .project-card {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-progress { background: #fff3cd; color: #856404; }
+        .status-planning { background: #d1ecf1; color: #0c5460; }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            transition: width 0.3s ease;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GitHub Data Manager Test</h1>
+        <p>This page tests the GitHub data manager integration to ensure it can fetch project data from GitHub repositories.</p>
+        
+        <div class="test-section">
+            <h2>Test Controls</h2>
+            <button onclick="testGitHubDataManager()">Test GitHub Data Manager</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test Results</h2>
+            <div id="test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Project Data</h2>
+            <div id="project-data"></div>
+        </div>
+    </div>
+
+    <script src="modules/GitHubDataManager.js"></script>
+    <script>
+        let githubDataManager = null;
+        let testResults = [];
+
+        function addResult(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            testResults.push({ message, type, timestamp });
+            updateResultsDisplay();
+        }
+
+        function updateResultsDisplay() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = testResults.map(result => 
+                `<div class="${result.type}">
+                    <strong>[${result.timestamp}]</strong> ${result.message}
+                </div>`
+            ).join('');
+        }
+
+        function clearResults() {
+            testResults = [];
+            updateResultsDisplay();
+            document.getElementById('project-data').innerHTML = '';
+        }
+
+        async function testGitHubDataManager() {
+            addResult('Starting GitHub Data Manager test...', 'info');
+            
+            try {
+                // Create and initialize the GitHub data manager
+                githubDataManager = new GitHubDataManager();
+                addResult('GitHubDataManager instance created', 'success');
+                
+                await githubDataManager.initialize();
+                addResult('GitHubDataManager initialized successfully', 'success');
+                
+                // Get all projects
+                const projects = githubDataManager.getAllProjects();
+                addResult(`Found ${projects.length} projects`, 'success');
+                
+                // Display project data
+                displayProjectData(projects);
+                
+                // Test individual project retrieval
+                if (projects.length > 0) {
+                    const firstProject = projects[0];
+                    const retrievedProject = githubDataManager.getProjectData(firstProject.id);
+                    if (retrievedProject) {
+                        addResult(`Successfully retrieved project: ${retrievedProject.name}`, 'success');
+                    } else {
+                        addResult(`Failed to retrieve project: ${firstProject.id}`, 'error');
+                    }
+                }
+                
+                // Test specific repositories
+                addResult('Testing specific repositories...', 'info');
+                
+                // Test DIYapp repository
+                const diyProject = githubDataManager.getProjectData('DIYapp');
+                if (diyProject) {
+                    addResult(`✅ DIYapp repository accessible: ${diyProject.name}`, 'success');
+                } else {
+                    addResult(`❌ DIYapp repository not accessible`, 'error');
+                }
+                
+                // Test BusinessLoclAi repository
+                const businessProject = githubDataManager.getProjectData('BusinessLoclAi');
+                if (businessProject) {
+                    addResult(`✅ BusinessLoclAi repository accessible: ${businessProject.name}`, 'success');
+                } else {
+                    addResult(`❌ BusinessLoclAi repository not accessible`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`GitHub Data Manager test failed: ${error.message}`, 'error');
+                console.error('GitHub Data Manager test error:', error);
+            }
+        }
+
+        // Local data manager test removed - only using GitHub data
+
+        function displayProjectData(projects) {
+            const container = document.getElementById('project-data');
+            
+            if (projects.length === 0) {
+                container.innerHTML = '<p>No projects found</p>';
+                return;
+            }
+            
+            container.innerHTML = projects.map(project => `
+                <div class="project-card">
+                    <h3>${project.name}</h3>
+                    <p><strong>ID:</strong> ${project.id}</p>
+                    <p><strong>Description:</strong> ${project.description}</p>
+                    <p><strong>Status:</strong> <span class="status status-${project.status.toLowerCase().replace(' ', '-')}">${project.status}</span></p>
+                    <p><strong>Progress:</strong> ${project.progress}%</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${project.progress}%"></div>
+                    </div>
+                    <p><strong>Completed Features:</strong> ${project.completed_features.length}</p>
+                    <p><strong>Todo Features:</strong> ${project.todo_features.length}</p>
+                    <p><strong>Last Updated:</strong> ${new Date(project.last_updated).toLocaleDateString()}</p>
+                    
+                    ${project.completed_features.length > 0 ? `
+                        <details>
+                            <summary>Completed Features (${project.completed_features.length})</summary>
+                            <ul>
+                                ${project.completed_features.slice(0, 5).map(feature => `<li>${feature}</li>`).join('')}
+                                ${project.completed_features.length > 5 ? `<li>... and ${project.completed_features.length - 5} more</li>` : ''}
+                            </ul>
+                        </details>
+                    ` : ''}
+                    
+                    ${project.todo_features.length > 0 ? `
+                        <details>
+                            <summary>Todo Features (${project.todo_features.length})</summary>
+                            <ul>
+                                ${project.todo_features.slice(0, 5).map(feature => `<li>${feature}</li>`).join('')}
+                                ${project.todo_features.length > 5 ? `<li>... and ${project.todo_features.length - 5} more</li>` : ''}
+                            </ul>
+                        </details>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Auto-run test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('Page loaded, ready for testing', 'info');
+        });
+    </script>
+</body>
+</html>

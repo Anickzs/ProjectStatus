@@ -130,9 +130,9 @@ class NotificationManager {
     }
 }
 
-// Import the enhanced ProjectDataManager
+// Import the enhanced GitHubDataManager
 // Note: In a real implementation, this would be a proper ES6 import
-// The enhanced ProjectDataManager is now loaded from modules/ProjectDataManager.js
+// The enhanced GitHubDataManager is now loaded from modules/GitHubDataManager.js
 
 class ProjectDetailManager {
     constructor() {
@@ -144,7 +144,6 @@ class ProjectDetailManager {
         this.dataUtils = new DataUtils();
         this.modalManager = new ModalManager();
         this.notificationManager = new NotificationManager();
-        this.projectDataManager = new ProjectDataManager();
         
         // Core instance variables
         this.currentProject = null;
@@ -170,15 +169,15 @@ class ProjectDetailManager {
         console.log('Utility modules and instance variables initialized');
         
         // Add a small delay to ensure DOM is fully loaded
-        setTimeout(() => {
+        setTimeout(async () => {
             console.log('DOM delay completed, calling init()...');
-            this.init();
+            await this.init();
         }, 100);
         
         console.log('Constructor completed, waiting for DOM...');
     }
 
-    init() {
+    async init() {
         console.log('=== ProjectDetailManager Initialization ===');
         console.log('DOM ready, starting initialization...');
         
@@ -196,8 +195,11 @@ class ProjectDetailManager {
         console.log('Setting up event listeners...');
         this.setupEventListeners();
         
+        // Initialize GitHub data manager if available
+        await this.initializeGitHubDataManager();
+        
         console.log('Loading project data...');
-        this.loadProjectData();
+        // loadProjectData() will be called after GitHubDataManager is initialized
         
         console.log('Setting up mobile menu...');
         this.setupMobileMenu();
@@ -206,6 +208,29 @@ class ProjectDetailManager {
         this.setupKeyboardShortcuts();
         
         console.log('Initialization complete!');
+    }
+
+    async initializeGitHubDataManager() {
+        try {
+            if (typeof GitHubDataManager !== 'undefined') {
+                console.log('Initializing GitHub data manager...');
+                const githubDataManager = new GitHubDataManager();
+                await githubDataManager.initialize();
+                window.githubDataManager = githubDataManager;
+                console.log('GitHub data manager initialized successfully');
+                
+                // Now load project data after GitHubDataManager is ready
+                this.loadProjectData();
+            } else {
+                console.log('GitHubDataManager not available, skipping...');
+                // Still try to load project data even without GitHubDataManager
+                this.loadProjectData();
+            }
+        } catch (error) {
+            console.warn('Failed to initialize GitHub data manager:', error);
+            // Still try to load project data even if GitHubDataManager fails
+            this.loadProjectData();
+        }
     }
 
     initializeDOMCache() {
@@ -446,51 +471,168 @@ class ProjectDetailManager {
             return;
         }
 
-        // Clean the project ID (remove any special characters or spaces)
-        this.projectId = this.projectId.trim().replace(/[^a-zA-Z0-9]/g, '');
+        // Parse and normalize the project ID
+        const targetId = this.projectId.trim().toLowerCase();
         
-        if (!this.projectId) {
-            console.log('Project ID is empty after cleaning, showing project selector');
+        if (!targetId) {
+            console.log('Project ID is empty after trimming, showing project selector');
             this.showProjectSelector();
             return;
         }
 
-        console.log('Loading project with ID:', this.projectId);
+        console.log('Loading project with target ID:', targetId);
         
         // Show loading state
         this.showLoadingState();
         
-        // Use ProjectDataManager to load project data
-        this.fetchProjectData();
+        // Use GitHubDataManager to load project data
+        this.loadProject(targetId);
     }
 
-    async fetchProjectData() {
+    /**
+     * Safe date label function that returns 'N/A' if falsy or invalid
+     * @param {string|Date} value - Date value to format
+     * @returns {string} Formatted date or 'N/A'
+     */
+    safeDateLabel(value) {
+        if (!value) return 'N/A';
+        
         try {
-            console.log('Fetching project data using enhanced ProjectDataManager...');
+            const date = new Date(value);
+            if (isNaN(date.getTime())) return 'N/A';
+            return date.toLocaleDateString();
+        } catch (error) {
+            return 'N/A';
+        }
+    }
+
+    /**
+     * Normalize project fields for consistent rendering
+     * @param {Object} project - Project data object
+     * @returns {Object} Normalized project fields
+     */
+    normalizeProjectFields(project) {
+        if (!project) return {};
+        
+        return {
+            status: project.status || project.metadata?.status || project.details?.status || 'Unknown',
+            phase: project.phase || project.metadata?.phase || project.details?.phase || 'Unknown',
+            progress: this.clamp(Number(project.progress || project.percentComplete || project.metadata?.progress || 0), 0, 100),
+            lastUpdatedRaw: project.lastUpdated || project.last_updated || project.metadata?.lastUpdated || project.metadata?.last_updated || project.details?.lastUpdated || null
+        };
+    }
+
+    /**
+     * Clamp a number between min and max values
+     * @param {number} value - Value to clamp
+     * @param {number} min - Minimum value
+     * @param {number} max - Maximum value
+     * @returns {number} Clamped value
+     */
+    clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    async loadProject(id) {
+        try {
+            console.log('=== LOADING PROJECT ===');
+            console.log('Target ID:', id);
             
-            // Initialize the enhanced ProjectDataManager if not already done
-            if (!this.projectDataManager.initialized) {
-                console.log('Initializing enhanced ProjectDataManager...');
-                await this.projectDataManager.initialize();
+            // Use GitHub data manager
+            if (window.githubDataManager && window.githubDataManager.initialized) {
+                console.log('Using GitHub data manager...');
+                
+                // Try to resolve the project using GitHubDataManager's resolution system
+                const projectData = window.githubDataManager.getProjectData(id);
+                
+                if (projectData) {
+                    this.currentProject = projectData;
+                    console.log('Project data loaded successfully');
+                    console.log('Resolved project by: id/alias/title');
+                    console.log('Project object keys:', Object.keys(this.currentProject));
+                    this.renderProjectData();
+                    return;
+                } else {
+                    // Project not found - show available projects
+                    const availableProjects = window.githubDataManager.getAllProjects();
+                    console.log(`Project "${id}" not found. Available projects:`, 
+                        availableProjects.map(p => p.id));
+                    
+                    // Clear loading state
+                    this.clearLoadingState();
+                    
+                    // Show error with option to select from available projects
+                    this.showProjectNotFoundError();
+                    return;
+                }
+            } else {
+                throw new Error('GitHub data manager not available');
             }
-            
-            // Use enhanced ProjectDataManager to fetch and load project data
-            const projectData = this.projectDataManager.getProjectData(this.projectId);
-            
-            if (!projectData) {
-                throw new Error(`Project "${this.projectId}" not found`);
-            }
-            
-            this.currentProject = projectData;
-            
-            console.log('Project data loaded successfully:', this.currentProject);
-            this.renderProjectData();
             
         } catch (error) {
             // Use centralized error handling
-            this.handleError(error, 'fetchProjectData', () => {
+            this.handleError(error, 'loadProject', () => {
                 this.showError(`Failed to load project data: ${error.message}`);
             });
+        }
+    }
+
+    /**
+     * Show error when project is not found with option to select from available projects
+     */
+    showProjectNotFoundError() {
+        const availableProjects = window.githubDataManager.getAllProjects();
+        
+        const errorMessage = `
+            <div class="error-container" style="text-align: center; padding: 2rem;">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #f59e0b; margin-bottom: 1rem;"></i>
+                </div>
+                <h2>Project Not Found</h2>
+                <p>The project "<strong>${this.projectId}</strong>" could not be found.</p>
+                
+                ${availableProjects.length > 0 ? `
+                    <div class="available-projects" style="margin-top: 2rem;">
+                        <h3>Available Projects:</h3>
+                        <div class="project-list" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                            ${availableProjects.map(project => `
+                                <button class="project-select-btn" 
+                                        onclick="projectDetail.selectProject('${project.id}')"
+                                        style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: white; cursor: pointer; text-align: left;">
+                                    <strong>${project.name}</strong>
+                                    <br>
+                                    <small style="color: #6b7280;">${project.description || 'No description available'}</small>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : `
+                    <p>No projects are currently available.</p>
+                `}
+                
+                <div class="error-actions" style="margin-top: 2rem;">
+                    <button onclick="projectDetail.showProjectSelector()" 
+                            style="padding: 0.75rem 1.5rem; background: #10b981; color: white; border: none; border-radius: 0.5rem; cursor: pointer; margin-right: 1rem;">
+                        <i class="fas fa-list"></i> Show All Projects
+                    </button>
+                    <button onclick="window.history.back()" 
+                            style="padding: 0.75rem 1.5rem; background: #6b7280; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                        <i class="fas fa-arrow-left"></i> Go Back
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Only replace the project detail grid content, not the entire main wrapper
+        const projectDetailGrid = document.querySelector('.project-detail-grid');
+        if (projectDetailGrid) {
+            projectDetailGrid.innerHTML = errorMessage;
+        } else {
+            // Fallback: replace main wrapper if project detail grid not found
+            const mainContent = this.domCache.mainWrapper || document.querySelector('.main-wrapper');
+            if (mainContent) {
+                mainContent.innerHTML = errorMessage;
+            }
         }
     }
 
@@ -642,15 +784,31 @@ class ProjectDetailManager {
         console.log('Project object:', this.currentProject);
 
         try {
+            // Restore original content if it was replaced by error page
+            if (this.originalContent) {
+                const mainContent = this.domCache.mainWrapper || document.querySelector('.main-wrapper');
+                if (mainContent && mainContent.innerHTML !== this.originalContent) {
+                    mainContent.innerHTML = this.originalContent;
+                    console.log('Original content restored from error page');
+                }
+            }
+            
+            // Refresh DOM cache after restoring content
+            this.refreshDOMCache();
+            
+            // Normalize project fields for consistent rendering
+            const normalizedFields = this.normalizeProjectFields(this.currentProject);
+            console.log('Normalized fields:', normalizedFields);
+            
             // Use DOMUtils batch update for better performance
             this.domUtils.safeUpdateElement('project-title', 'textContent', this.currentProject.name);
             this.domUtils.safeUpdateElement('project-subtitle', 'textContent', this.getProjectSubtitle());
             this.updateProjectIcon();
             this.domUtils.safeUpdateElement('project-description', 'innerHTML', this.formatDescription(this.currentProject.description || this.currentProject.short_description || 'No description available'));
-            this.domUtils.safeUpdateElement('project-status', 'textContent', this.currentProject.status || 'Unknown');
-            this.domUtils.safeUpdateElement('project-phase', 'textContent', this.getProjectPhase());
-            this.domUtils.safeUpdateElement('last-updated', 'textContent', this.getLastUpdated());
-            this.updateProgressBar();
+            this.domUtils.safeUpdateElement('project-status', 'textContent', normalizedFields.status);
+            this.domUtils.safeUpdateElement('project-phase', 'textContent', normalizedFields.phase);
+            this.domUtils.safeUpdateElement('last-updated', 'textContent', this.safeDateLabel(normalizedFields.lastUpdatedRaw));
+            this.updateProgressBar(normalizedFields.progress);
             
             // Load and render other sections
             this.renderProjectSections();
@@ -748,8 +906,8 @@ class ProjectDetailManager {
     }
 
     getProjectPhase() {
-        // Use ProjectDataManager for project phase determination
-        return this.projectDataManager.getProjectData(this.currentProject.id).status || 'Unknown';
+        // Use GitHub data for project phase determination
+        return this.currentProject.status || 'Unknown';
     }
 
     getLastUpdated() {
@@ -757,7 +915,7 @@ class ProjectDetailManager {
         return this.dataUtils.formatDate(this.currentProject.lastUpdated);
     }
 
-    updateProgressBar() {
+    updateProgressBar(progress = null) {
         // Use cached DOM elements for better performance
         const progressFill = this.domCache.progressFill;
         const progressText = this.domCache.progressText;
@@ -767,9 +925,10 @@ class ProjectDetailManager {
             return;
         }
         
-        const progress = this.currentProject.progress || 0;
-        progressFill.style.width = `${progress}%`;
-        progressText.textContent = `${progress}% Complete`;
+        // Use provided progress or fall back to project data
+        const progressValue = progress !== null ? progress : (this.currentProject.progress || 0);
+        progressFill.style.width = `${progressValue}%`;
+        progressText.textContent = `${progressValue}% Complete`;
         
         // Animate the progress bar
         setTimeout(() => {
@@ -793,13 +952,13 @@ class ProjectDetailManager {
     }
 
     generateTasksFromProject() {
-        // Use enhanced ProjectDataManager to generate tasks
+        // Use GitHub data to generate tasks
         try {
-            // Check if we have enhanced task data from markdown processing
+            // Check if we have task data from GitHub
             if (this.currentProject.tasks && 
                 this.currentProject.tasks.completed && 
                 this.currentProject.tasks.completed.length > 0) {
-                console.log('Using enhanced tasks from markdown processing');
+                console.log('Using tasks from GitHub data');
                 return this.currentProject.tasks;
             }
             
@@ -1025,11 +1184,10 @@ class ProjectDetailManager {
     }
 
     generateFilesFromProject() {
-        // Use ProjectDataManager to generate files
+        // Use GitHub data to generate files
         try {
-            const projectData = this.projectDataManager.getProjectData(this.currentProject.id);
-            if (projectData && projectData.files) {
-                return projectData.files; // Return the actual files from project data
+            if (this.currentProject.files) {
+                return this.currentProject.files; // Return the actual files from GitHub data
             }
             return this.generateBasicFiles();
         } catch (error) {
@@ -1042,103 +1200,8 @@ class ProjectDetailManager {
     generateBasicFiles() {
         const files = [];
 
-        // Add project-specific files based on type
-        if (this.currentProject.name.toLowerCase().includes('diy')) {
-            files.push({
-                id: 'file-1',
-                name: 'Project Requirements',
-                type: 'pdf',
-                size: '2.3 MB',
-                description: 'Detailed project requirements and specifications',
-                uploadDate: this.getLastUpdated(),
-                category: 'Project Files'
-            });
-            files.push({
-                id: 'file-2',
-                name: 'UI Mockups',
-                type: 'fig',
-                size: '15.7 MB',
-                description: 'Figma design files and UI mockups',
-                uploadDate: this.getLastUpdated(),
-                category: 'Design Files'
-            });
-            files.push({
-                id: 'file-3',
-                name: 'Technical Documentation',
-                type: 'md',
-                size: '45 KB',
-                description: 'Technical specifications and API documentation',
-                uploadDate: this.getLastUpdated(),
-                category: 'Documentation'
-            });
-        } else if (this.currentProject.name.toLowerCase().includes('server')) {
-            files.push({
-                id: 'file-1',
-                name: 'Infrastructure Diagram',
-                type: 'drawio',
-                size: '1.2 MB',
-                description: 'Server infrastructure and network diagram',
-                uploadDate: this.getLastUpdated(),
-                category: 'Architecture'
-            });
-            files.push({
-                id: 'file-2',
-                name: 'Deployment Scripts',
-                type: 'sh',
-                size: '8.5 KB',
-                description: 'Automated deployment and setup scripts',
-                uploadDate: this.getLastUpdated(),
-                category: 'Scripts'
-            });
-            files.push({
-                id: 'file-3',
-                name: 'Configuration Files',
-                type: 'yml',
-                size: '2.1 KB',
-                description: 'Docker and environment configuration',
-                uploadDate: this.getLastUpdated(),
-                category: 'Configuration'
-            });
-        } else if (this.currentProject.name.toLowerCase().includes('email')) {
-            files.push({
-                id: 'file-1',
-                name: 'API Documentation',
-                type: 'pdf',
-                size: '3.8 MB',
-                description: 'Gmail API integration documentation',
-                uploadDate: this.getLastUpdated(),
-                category: 'API Docs'
-            });
-            files.push({
-                id: 'file-2',
-                name: 'Database Schema',
-                type: 'sql',
-                size: '12 KB',
-                description: 'Database structure and relationships',
-                uploadDate: this.getLastUpdated(),
-                category: 'Database'
-            });
-            files.push({
-                id: 'file-3',
-                name: 'User Stories',
-                type: 'md',
-                size: '28 KB',
-                description: 'User requirements and feature stories',
-                uploadDate: this.getLastUpdated(),
-                category: 'Requirements'
-            });
-        }
-
-        // Add common project files
-        files.push({
-            id: 'file-common-1',
-            name: 'README.md',
-            type: 'md',
-            size: '15 KB',
-            description: 'Project overview and setup instructions',
-            uploadDate: this.getLastUpdated(),
-            category: 'Documentation'
-        });
+        // Files are now generated from GitHub data only
+        // No sample files are created
 
         return files;
     }
@@ -1218,10 +1281,9 @@ class ProjectDetailManager {
     }
 
     generateTimelineFromProject() {
-        // Use ProjectDataManager for timeline generation
+        // Use GitHub data for timeline generation
         try {
-            const projectData = this.projectDataManager.getProjectData(this.currentProject.id);
-            const completedFeatures = projectData.completed_features || [];
+            const completedFeatures = this.currentProject.completed_features || [];
             const completedCount = completedFeatures.length;
 
             const timeline = [];
@@ -1455,22 +1517,21 @@ class ProjectDetailManager {
     }
 
     generateActivitiesFromProject() {
-        // Use ProjectDataManager for activity generation
+        // Use GitHub data for activity generation
         try {
-            const projectData = this.projectDataManager.getProjectData(this.currentProject.id);
             const activities = [];
 
             // Add recent project updates
             activities.push({
                 id: 'activity-1',
                 type: 'update',
-                message: `Project progress updated to ${projectData.progress || 0}%`,
+                message: `Project progress updated to ${this.currentProject.progress || 0}%`,
                 time: 'Just now'
             });
 
             // Add feature completion activities
-            if (projectData.completed_features) {
-                const recentFeatures = projectData.completed_features.slice(-3); // Last 3 features
+            if (this.currentProject.completed_features) {
+                const recentFeatures = this.currentProject.completed_features.slice(-3); // Last 3 features
                 recentFeatures.forEach((feature, index) => {
                     if (typeof feature === 'string' && feature.trim()) {
                         activities.push({
@@ -1484,11 +1545,11 @@ class ProjectDetailManager {
             }
 
             // Add status change activity
-            if (projectData.status) {
+            if (this.currentProject.status) {
                 activities.push({
                     id: 'activity-status',
                     type: 'status',
-                    message: `Project status set to: ${projectData.status}`,
+                    message: `Project status set to: ${this.currentProject.status}`,
                     time: 'Today'
                 });
             }
@@ -1766,7 +1827,19 @@ class ProjectDetailManager {
         try {
             // In a real app, you would send a request to an API to export data
             console.log('Exporting project:', this.projectId);
-            const projectData = this.projectDataManager.getProjectData(this.projectId);
+            
+            // Use GitHub data manager if available, otherwise use current project data
+            let projectData;
+            if (window.githubDataManager && window.githubDataManager.initialized) {
+                projectData = window.githubDataManager.getProjectData(this.projectId);
+            } else {
+                projectData = this.currentProject;
+            }
+            
+            if (!projectData) {
+                throw new Error('No project data available for export');
+            }
+            
             const dataStr = JSON.stringify(projectData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             
@@ -1814,8 +1887,8 @@ class ProjectDetailManager {
         console.log('Edit task:', taskId);
         
         try {
-            // Use DataUtils to find the task
-            const task = this.projectDataManager.getProjectData(this.projectId).completed_features.find(f => f.id === taskId);
+            // Use GitHub data to find the task
+            const task = this.currentProject.completed_features.find(f => f.id === taskId);
             
             if (task) {
                 // Populate edit form (you can create a separate edit task modal)
@@ -1908,7 +1981,7 @@ class ProjectDetailManager {
         
         try {
             // In a real app, you would send a request to an API to download the file
-            const file = this.projectDataManager.getProjectData(this.projectId).files.find(f => f.id === fileId);
+            const file = this.currentProject.files.find(f => f.id === fileId);
             
             if (file) {
                 // For demo purposes, create a simple text file download
@@ -2060,13 +2133,17 @@ class ProjectDetailManager {
     }
 
     getProjectHealth() {
-        // Use ProjectDataManager for project health assessment
-        return this.projectDataManager.getProjectData(this.currentProject.id).status || 'Unknown';
+        // Use GitHub data for project health assessment
+        return this.currentProject.status || 'Unknown';
     }
 
     refreshProjectData() {
         this.notificationManager.showNotification('Refreshing project data...', 'info');
-        this.fetchProjectData();
+        if (this.projectId) {
+            this.loadProject(this.projectId);
+        } else {
+            this.loadProjectData();
+        }
     }
 
     loadSelectedProject() {
@@ -2089,7 +2166,7 @@ class ProjectDetailManager {
         
         // Set project ID and load data
         this.projectId = selectedProjectId;
-        this.loadProjectData();
+        this.loadProject(selectedProjectId);
     }
 
     showProjectSelector() {
@@ -2182,12 +2259,16 @@ class ProjectDetailManager {
             newUrl.searchParams.set('id', projectId);
             window.history.pushState({}, '', newUrl);
             
-            // Set project ID and load data
+            // Set project ID
             this.projectId = projectId;
-            this.loadProjectData();
             
             // Show loading notification
             this.notificationManager.showNotification('Loading selected project...', 'info');
+            
+            // Add a small delay to ensure DOM is properly restored
+            setTimeout(() => {
+                this.loadProject(projectId);
+            }, 100);
             
         } catch (error) {
             this.handleError(error, 'selectProject', () => {

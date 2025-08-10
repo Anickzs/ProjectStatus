@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Project Detail Fixes</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-link { display: block; margin: 10px 0; padding: 10px; background: #f0f0f0; text-decoration: none; color: #333; border-radius: 5px; }
+        .test-link:hover { background: #e0e0e0; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Test Project Detail Page Fixes</h1>
+    
+    <h2>Test Cases:</h2>
+    
+    <a href="project-detail.html?id=at-home-diy-project-statistics-status" class="test-link">
+        Test 1: Full ID - at-home-diy-project-statistics-status
+    </a>
+    
+    <a href="project-detail.html?id=businesslocalai-project-details" class="test-link">
+        Test 2: Full ID - businesslocalai-project-details
+    </a>
+    
+    <a href="project-detail.html?id=diyapp" class="test-link">
+        Test 3: Alias - diyapp (should resolve to at-home-diy-project-statistics-status)
+    </a>
+    
+    <a href="project-detail.html?id=businesslocalai" class="test-link">
+        Test 4: Alias - businesslocalai (should resolve to businesslocalai-project-details)
+    </a>
+    
+    <a href="project-detail.html?id=nonexistent" class="test-link">
+        Test 5: Non-existent ID (should show project selector)
+    </a>
+    
+    <h2>Expected Results:</h2>
+    <ul>
+        <li class="success">Tests 1-4: Should load project data without "Project not found" errors</li>
+        <li class="success">Tests 1-4: Should display valid dates (not "Invalid Date")</li>
+        <li class="success">Tests 1-4: Should show proper progress percentages</li>
+        <li class="success">Tests 3-4: Should resolve aliases to actual project IDs</li>
+        <li class="success">Test 5: Should show project selector for non-existent projects</li>
+    </ul>
+    
+    <h2>Console Output:</h2>
+    <p>Open browser console to see diagnostic logs:</p>
+    <ul>
+        <li>"=== PROJECT LOADING DEBUG ===" - Shows URL parsing</li>
+        <li>"=== LOADING PROJECT ===" - Shows project resolution</li>
+        <li>"Resolved project by: id/alias/title" - Shows which getter matched</li>
+        <li>"Normalized fields:" - Shows field normalization results</li>
+    </ul>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Parsing Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        .info { background-color: #d1ecf1; }
+        .warning { background-color: #fff3cd; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .data-panel {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Markdown Parsing Test</h1>
+    
+    <div class="test-section info">
+        <h3>Test Controls</h3>
+        <button onclick="testParsing()">Test Parsing</button>
+        <button onclick="testSessionCache()">Test Session Cache</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script src="modules/GitHubDataManager.js"></script>
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `test-section ${type}`;
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            resultsDiv.appendChild(logEntry);
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testParsing() {
+            try {
+                log('Starting parsing test...', 'info');
+                
+                // Create GitHubDataManager instance
+                const githubDataManager = new GitHubDataManager();
+                
+                // Test with sample markdown content
+                const sampleMarkdown = `# At Home DIY
+
+## Project Overview
+Next.js 14 DIY project planning app with build planner, quick builds, and responsive design for home improvement enthusiasts.
+
+## Project Status
+- **Current Phase**: Development
+- **Progress**: 65%
+- **Target Launch**: Q1 2024
+
+## Completed Features
+- [x] User authentication and profile management
+- [x] Project creation and basic CRUD operations
+- [x] Material calculator with common DIY materials
+- [x] Progress tracking with visual indicators
+- [x] Responsive design implementation
+- [x] Database integration
+
+## In Progress
+- [ ] Advanced material calculations
+- [ ] Project sharing and collaboration
+- [ ] Mobile app optimization
+
+## Pending Tasks
+- [ ] User feedback system
+- [ ] Advanced project templates
+- [ ] Cost estimation features
+- [ ] Integration with hardware stores
+
+## Technical Stack
+- **Frontend**: Next.js 14 with React
+- **Styling**: Tailwind CSS
+- **Database**: PostgreSQL
+- **Authentication**: NextAuth.js
+- **Deployment**: Vercel
+
+## Key Features
+1. **Project Planner**: Comprehensive DIY project planning tools
+2. **Material Calculator**: Accurate material and cost calculations
+3. **Progress Tracking**: Visual progress indicators and milestones`;
+
+                log('Testing markdown parsing...', 'info');
+                
+                // Test the parsing method directly
+                const parsedData = githubDataManager.parseMarkdownToStructuredData(sampleMarkdown, 'DIYapp');
+                
+                log('Parsing completed successfully!', 'success');
+                
+                // Display the parsed data
+                const dataDisplay = document.createElement('div');
+                dataDisplay.className = 'test-section info';
+                dataDisplay.innerHTML = `
+                    <h3>Parsed Data Structure</h3>
+                    <pre>${JSON.stringify(parsedData, null, 2)}</pre>
+                `;
+                resultsDiv.appendChild(dataDisplay);
+                
+                // Test section splitting
+                log('Testing section splitting...', 'info');
+                const sections = githubDataManager.splitByHeadings(sampleMarkdown);
+                
+                const sectionsDisplay = document.createElement('div');
+                sectionsDisplay.className = 'test-section info';
+                sectionsDisplay.innerHTML = `
+                    <h3>Extracted Sections</h3>
+                    <pre>${JSON.stringify(sections, null, 2)}</pre>
+                `;
+                resultsDiv.appendChild(sectionsDisplay);
+                
+                // Test individual extraction methods
+                log('Testing individual extraction methods...', 'info');
+                
+                const testResults = {
+                    name: githubDataManager.extractProjectName(sections, 'DIYapp'),
+                    overview: githubDataManager.extractOverview(sections),
+                    status: githubDataManager.extractStatus(sections),
+                    completedFeatures: githubDataManager.extractCompletedFeatures(sections),
+                    inProgressFeatures: githubDataManager.extractInProgressFeatures(sections),
+                    pendingTasks: githubDataManager.extractPendingTasks(sections),
+                    technicalStack: githubDataManager.extractTechnicalStack(sections),
+                    keyFeatures: githubDataManager.extractKeyFeatures(sections)
+                };
+                
+                const extractionDisplay = document.createElement('div');
+                extractionDisplay.className = 'test-section success';
+                extractionDisplay.innerHTML = `
+                    <h3>Individual Extraction Results</h3>
+                    <pre>${JSON.stringify(testResults, null, 2)}</pre>
+                `;
+                resultsDiv.appendChild(extractionDisplay);
+                
+            } catch (error) {
+                log(`Parsing test failed: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        async function testSessionCache() {
+            try {
+                log('Testing session cache functionality...', 'info');
+                
+                const githubDataManager = new GitHubDataManager();
+                
+                // Initialize the manager
+                await githubDataManager.initialize();
+                
+                log('GitHubDataManager initialized', 'success');
+                
+                // Get session stats
+                const stats = githubDataManager.getSessionStats();
+                log(`Session stats: ${JSON.stringify(stats, null, 2)}`, 'info');
+                
+                // Test data access
+                const allProjects = githubDataManager.getAllProjects();
+                const structuredProjects = githubDataManager.getAllProjectsStructured();
+                
+                log(`Found ${allProjects.length} projects (legacy format)`, 'success');
+                log(`Found ${structuredProjects.length} projects (structured format)`, 'success');
+                
+                // Display comparison
+                if (allProjects.length > 0 && structuredProjects.length > 0) {
+                    const comparisonDisplay = document.createElement('div');
+                    comparisonDisplay.className = 'test-section info';
+                    comparisonDisplay.innerHTML = `
+                        <h3>Data Format Comparison</h3>
+                        <div class="comparison">
+                            <div class="data-panel">
+                                <h4>Legacy Format (First Project)</h4>
+                                <pre>${JSON.stringify(allProjects[0], null, 2)}</pre>
+                            </div>
+                            <div class="data-panel">
+                                <h4>Structured Format (First Project)</h4>
+                                <pre>${JSON.stringify(structuredProjects[0], null, 2)}</pre>
+                            </div>
+                        </div>
+                    `;
+                    resultsDiv.appendChild(comparisonDisplay);
+                }
+                
+            } catch (error) {
+                log(`Session cache test failed: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Auto-run parsing test on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, starting parsing test...', 'info');
+            setTimeout(testParsing, 1000);
+        });
+    </script>
+</body>
+</html>

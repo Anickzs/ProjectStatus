@@ -1,60 +1,272 @@
 // Enhanced JavaScript for Project In Progress Dashboard
-document.addEventListener('DOMContentLoaded', function() {
+let githubDataManager = null;
+
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('Project In Progress Dashboard loaded');
     
-    // Initialize all interactive features
-    setupProjectCards();
-    setupProgressAnimations();
-    setupHoverEffects();
-    setupStatusIndicators();
-    setupNavigation();
-    setupMobileMenu();
-    
-    // Add entrance animations
-    animateEntrance();
+    try {
+        // Initialize GitHub data manager
+        await initializeGitHubDataManager();
+        
+        // Initialize all interactive features
+        setupProjectCards();
+        setupProgressAnimations();
+        setupHoverEffects();
+        setupStatusIndicators();
+        setupNavigation();
+        setupMobileMenu();
+        
+        // Add entrance animations
+        animateEntrance();
+    } catch (error) {
+        console.error('Failed to initialize dashboard:', error);
+        showNotification('Failed to load project data from GitHub', 'error');
+    }
 });
 
-function setupProjectCards() {
-    const projectCards = document.querySelectorAll('.project-card');
+async function initializeGitHubDataManager() {
+    try {
+        // Create and initialize the GitHub data manager
+        githubDataManager = new GitHubDataManager();
+        await githubDataManager.initialize();
+        
+        // Make it globally available for other scripts
+        window.githubDataManager = githubDataManager;
+        
+        console.log('GitHub data manager initialized successfully');
+        showNotification('Project data loaded from GitHub', 'success');
+    } catch (error) {
+        console.error('Failed to initialize GitHub data manager:', error);
+        showNotification('Failed to load project data from GitHub', 'error');
+        throw error; // Re-throw to prevent further initialization
+    }
+}
+
+async function setupProjectCards() {
+    // Only use GitHub data
+    if (githubDataManager && githubDataManager.initialized) {
+        await populateProjectCardsFromGitHub();
+    } else {
+        console.warn('GitHub data manager not available, cannot populate project cards');
+        showNotification('GitHub data not available', 'error');
+    }
+}
+
+async function populateProjectCardsFromGitHub() {
+    try {
+        const projects = githubDataManager.getAllProjects();
+        const projectsGrid = document.querySelector('.projects-grid');
+        
+        if (!projectsGrid || projects.length === 0) {
+            console.warn('No projects found or projects grid not available');
+            return;
+        }
+        
+        // Clear existing cards
+        projectsGrid.innerHTML = '';
+        
+        // Create cards for each project
+        projects.forEach((project, index) => {
+            const projectCard = createProjectCard(project, index);
+            projectsGrid.appendChild(projectCard);
+        });
+        
+        console.log(`Populated ${projects.length} project cards from GitHub data`);
+        
+            } catch (error) {
+            console.error('Error populating project cards from GitHub:', error);
+            showNotification('Failed to load project data from GitHub', 'error');
+        }
+}
+
+function createProjectCard(project, index) {
+    const card = document.createElement('div');
+    card.className = 'project-card';
     
-    projectCards.forEach((card, index) => {
-        // Add staggered entrance animation
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
+    // Add staggered entrance animation
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(30px)';
+    
+    setTimeout(() => {
+        card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+    }, index * 150);
+    
+    // Determine project icon and type
+    const projectType = getProjectType(project.name);
+    const iconClass = getProjectIcon(projectType);
+    const statusClass = getStatusClass(project.status);
+    
+    card.innerHTML = `
+        <div class="project-header">
+            <div class="project-title">
+                <div class="project-icon ${projectType.toLowerCase()}-icon">
+                    <i class="${iconClass}"></i>
+                </div>
+                <div class="title-content">
+                    <h3>${project.name}</h3>
+                    <span class="project-tag">${projectType}</span>
+                </div>
+                <i class="fas fa-external-link-alt external-link"></i>
+            </div>
+            <div class="project-actions">
+                <div class="status-dropdown">
+                    <span class="status-indicator ${statusClass}">
+                        <i class="fas fa-circle"></i>
+                        ${project.status}
+                    </span>
+                </div>
+                <button class="edit-btn" title="Edit Project">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+            </div>
+        </div>
         
-        setTimeout(() => {
-            card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 150);
+        <p class="project-description">${project.description}</p>
         
-        // Add click event for edit button
-        const editBtn = card.querySelector('.edit-btn');
-        if (editBtn) {
-            editBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                handleEditProject(card);
-            });
-        }
+        <div class="project-phase">
+            <i class="fas fa-layer-group"></i>
+            Phase ${getProjectPhase(project.progress)}: ${getPhaseDescription(project.progress)}
+        </div>
         
-        // Add click event for external link
-        const externalLink = card.querySelector('.external-link');
-        if (externalLink) {
-            externalLink.addEventListener('click', function(e) {
-                e.stopPropagation();
-                handleExternalLink(card);
-            });
-        }
+        <div class="project-meta">
+            <span class="last-updated">
+                <i class="fas fa-calendar-alt"></i>
+                Last updated: ${formatDate(project.last_updated)}
+            </span>
+            <div class="progress-indicator">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${project.progress}%"></div>
+                </div>
+                <span class="progress-text">${project.progress}% Complete</span>
+            </div>
+        </div>
         
-        // Add click event for status indicator
-        const statusIndicator = card.querySelector('.status-indicator');
-        if (statusIndicator) {
-            statusIndicator.addEventListener('click', function(e) {
-                e.stopPropagation();
-                handleStatusChange(card);
-            });
+        <div class="project-content">
+            <div class="content-section completed">
+                <div class="section-header">
+                    <i class="fas fa-check-circle"></i>
+                    <h4>Completed</h4>
+                </div>
+                <ul>
+                    ${project.completed_features.slice(0, 3).map(feature => `<li>${feature}</li>`).join('')}
+                    ${project.completed_features.length > 3 ? `<li>... and ${project.completed_features.length - 3} more</li>` : ''}
+                </ul>
+            </div>
+            
+            <div class="content-section next-steps">
+                <div class="section-header">
+                    <i class="fas fa-file-alt"></i>
+                    <h4>Next Steps</h4>
+                </div>
+                <ul>
+                    ${project.todo_features.slice(0, 3).map(feature => `<li>${feature}</li>`).join('')}
+                    ${project.todo_features.length > 3 ? `<li>... and ${project.todo_features.length - 3} more</li>` : ''}
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    // Add event listeners
+    setupProjectCardEventListeners(card, project);
+    
+    return card;
+}
+
+function setupProjectCardEventListeners(card, project) {
+    // Add click event for edit button
+    const editBtn = card.querySelector('.edit-btn');
+    if (editBtn) {
+        editBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            handleEditProject(card);
+        });
+    }
+    
+    // Add click event for external link
+    const externalLink = card.querySelector('.external-link');
+    if (externalLink) {
+        externalLink.addEventListener('click', function(e) {
+            e.stopPropagation();
+            handleExternalLink(card);
+        });
+    }
+    
+    // Add click event for status indicator
+    const statusIndicator = card.querySelector('.status-indicator');
+    if (statusIndicator) {
+        statusIndicator.addEventListener('click', function(e) {
+            e.stopPropagation();
+            handleStatusChange(card);
+        });
+    }
+    
+    // Add click event for the entire card
+    card.addEventListener('click', function(e) {
+        if (!e.target.closest('.edit-btn') && !e.target.closest('.external-link') && !e.target.closest('.status-indicator')) {
+            navigateToProjectDetail(project.name);
         }
     });
+}
+
+// Static project cards function removed - only using GitHub data
+
+// Helper functions for project card creation
+function getProjectType(projectName) {
+    const name = projectName.toLowerCase();
+    if (name.includes('diy')) return 'DIY App';
+    if (name.includes('server') || name.includes('infra')) return 'Infrastructure';
+    if (name.includes('email') || name.includes('assistant')) return 'AI Automation';
+    if (name.includes('trading') || name.includes('bot')) return 'Financial AI';
+    return 'Web Application';
+}
+
+function getProjectIcon(projectType) {
+    const icons = {
+        'DIY App': 'fas fa-hammer',
+        'Infrastructure': 'fas fa-server',
+        'AI Automation': 'fas fa-envelope',
+        'Financial AI': 'fas fa-robot',
+        'Web Application': 'fas fa-project-diagram'
+    };
+    return icons[projectType] || 'fas fa-project-diagram';
+}
+
+function getStatusClass(status) {
+    const statusMap = {
+        'Completed': 'status-completed',
+        'In Progress': 'status-progress',
+        'Planning': 'status-planning',
+        'Pending': 'status-pending'
+    };
+    return statusMap[status] || 'status-unknown';
+}
+
+function getProjectPhase(progress) {
+    if (progress >= 80) return 4;
+    if (progress >= 60) return 3;
+    if (progress >= 40) return 2;
+    if (progress >= 20) return 1;
+    return 0;
+}
+
+function getPhaseDescription(progress) {
+    if (progress >= 80) return 'Testing & Polish';
+    if (progress >= 60) return 'Advanced Features';
+    if (progress >= 40) return 'Core Development';
+    if (progress >= 20) return 'Basic Setup';
+    return 'Planning & Research';
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+    } catch (error) {
+        return dateString;
+    }
 }
 
 function setupProgressAnimations() {
@@ -445,15 +657,18 @@ function navigateToProjectDetail(projectName) {
 }
 
 function getProjectIdFromName(projectName) {
-    // Map project names to their IDs in the JSON
-    const projectMap = {
-        'At Home DIY': 'DIYAPP',
-        'Family Business Infra Server': 'BusinessLoclAi',
-        'AI Email Assistant': 'AiAutoAgency',
-        'Trading Bots': 'CryptoTradingBot'
-    };
+    // Use GitHub data manager only
+    if (githubDataManager) {
+        const projects = githubDataManager.getAllProjects();
+        const project = projects.find(p => p.name === projectName);
+        if (project) {
+            return project.id;
+        }
+    }
     
-    return projectMap[projectName] || 'DIYAPP'; // Default to DIYAPP if not found
+    // No fallback - only GitHub repositories are supported
+    console.warn(`Project "${projectName}" not found in GitHub data`);
+    return null;
 }
 
 function setupMobileMenu() {

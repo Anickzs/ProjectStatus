@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compatibility Test - ProjectDataManager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>ProjectDataManager Compatibility Test</h1>
+    
+    <div class="test-container">
+        <h2>Global Compatibility Test</h2>
+        <p>This test verifies that ProjectDataManager is available globally for backwards compatibility.</p>
+        
+        <button onclick="testGlobalCompatibility()">Test Global Compatibility</button>
+        <button onclick="testGitHubDataManager()">Test GitHubDataManager</button>
+        <button onclick="testBothManagers()">Test Both Managers</button>
+        
+        <div id="test-results"></div>
+    </div>
+
+    <script src="modules/GitHubDataManager.js"></script>
+    <script>
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function testGlobalCompatibility() {
+            log('=== Testing Global Compatibility ===', 'info');
+            
+            try {
+                // Test if ProjectDataManager is available globally
+                if (typeof window.ProjectDataManager !== 'undefined') {
+                    log('✓ ProjectDataManager is available globally', 'success');
+                    
+                    // Test if it's the same as GitHubDataManager
+                    if (window.ProjectDataManager === GitHubDataManager) {
+                        log('✓ ProjectDataManager is correctly aliased to GitHubDataManager', 'success');
+                    } else {
+                        log('✗ ProjectDataManager is not the same as GitHubDataManager', 'error');
+                    }
+                    
+                    // Test instantiation
+                    try {
+                        const projectManager = new window.ProjectDataManager();
+                        log('✓ ProjectDataManager can be instantiated', 'success');
+                        log(`ProjectDataManager constructor: ${projectManager.constructor.name}`, 'info');
+                    } catch (error) {
+                        log(`✗ Failed to instantiate ProjectDataManager: ${error.message}`, 'error');
+                    }
+                    
+                } else {
+                    log('✗ ProjectDataManager is not available globally', 'error');
+                }
+                
+            } catch (error) {
+                log(`✗ Global compatibility test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testGitHubDataManager() {
+            log('=== Testing GitHubDataManager ===', 'info');
+            
+            try {
+                if (typeof GitHubDataManager !== 'undefined') {
+                    log('✓ GitHubDataManager is available', 'success');
+                    
+                    // Test instantiation
+                    try {
+                        const githubManager = new GitHubDataManager();
+                        log('✓ GitHubDataManager can be instantiated', 'success');
+                        log(`GitHubDataManager constructor: ${githubManager.constructor.name}`, 'info');
+                        
+                        // Test basic methods
+                        if (typeof githubManager.initialize === 'function') {
+                            log('✓ GitHubDataManager has initialize method', 'success');
+                        } else {
+                            log('✗ GitHubDataManager missing initialize method', 'error');
+                        }
+                        
+                        if (typeof githubManager.getProjectData === 'function') {
+                            log('✓ GitHubDataManager has getProjectData method', 'success');
+                        } else {
+                            log('✗ GitHubDataManager missing getProjectData method', 'error');
+                        }
+                        
+                    } catch (error) {
+                        log(`✗ Failed to instantiate GitHubDataManager: ${error.message}`, 'error');
+                    }
+                    
+                } else {
+                    log('✗ GitHubDataManager is not available', 'error');
+                }
+                
+            } catch (error) {
+                log(`✗ GitHubDataManager test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testBothManagers() {
+            log('=== Testing Both Managers Together ===', 'info');
+            
+            try {
+                if (typeof GitHubDataManager !== 'undefined' && typeof window.ProjectDataManager !== 'undefined') {
+                    log('✓ Both managers are available', 'success');
+                    
+                    const githubManager = new GitHubDataManager();
+                    const projectManager = new window.ProjectDataManager();
+                    
+                    // Test that they have the same methods
+                    const githubMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(githubManager));
+                    const projectMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(projectManager));
+                    
+                    log(`GitHubDataManager methods: ${githubMethods.length}`, 'info');
+                    log(`ProjectDataManager methods: ${projectMethods.length}`, 'info');
+                    
+                    // Check if they have the same key methods
+                    const keyMethods = ['initialize', 'getProjectData', 'getAllProjects'];
+                    let methodMatch = true;
+                    
+                    for (const method of keyMethods) {
+                        if (typeof githubManager[method] === 'function' && typeof projectManager[method] === 'function') {
+                            log(`✓ Both managers have ${method} method`, 'success');
+                        } else {
+                            log(`✗ Method ${method} mismatch between managers`, 'error');
+                            methodMatch = false;
+                        }
+                    }
+                    
+                    if (methodMatch) {
+                        log('✓ Both managers have compatible interfaces', 'success');
+                    } else {
+                        log('✗ Managers have incompatible interfaces', 'error');
+                    }
+                    
+                } else {
+                    log('✗ One or both managers are not available', 'error');
+                }
+                
+            } catch (error) {
+                log(`✗ Both managers test failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run basic test when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Page loaded, running basic compatibility check...', 'info');
+            testGlobalCompatibility();
+        });
+    </script>
+</body>
+</html>

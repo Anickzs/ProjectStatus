@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Loading Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Project Loading Test</h1>
+        
+        <div class="test-section">
+            <h3>Test Project Loading</h3>
+            <p>Click the links below to test different project loading scenarios. The fixes should resolve the DOM element errors and ensure proper project loading.</p>
+            
+            <div class="test-links">
+                <a href="project-detail.html?id=DIYAPP" class="test-link">
+                    <i class="fas fa-hammer"></i>
+                    Test DIYAPP Project
+                </a>
+                
+                <a href="project-detail.html?id=BusinessLoclAi" class="test-link">
+                    <i class="fas fa-server"></i>
+                    Test BusinessLoclAi Project
+                </a>
+                
+                <a href="project-detail.html?id=%F0%9F%93%8A%20AT%20HOME%20DIY%20-%20PROJECT%20STATISTICS%20&%20STATUS" class="test-link">
+                    <i class="fas fa-chart-bar"></i>
+                    Test Complex URL (should map to DIYAPP)
+                </a>
+                
+                <a href="project-detail.html?id=INVALIDPROJECT" class="test-link">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Test Invalid Project (should show error)
+                </a>
+                
+                <a href="project-detail.html" class="test-link">
+                    <i class="fas fa-list"></i>
+                    Test No Project ID (should show selector)
+                </a>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Expected Results After Fixes</h3>
+            <ul>
+                <li><strong>DIYAPP</strong>: Should load the DIY project successfully without DOM errors</li>
+                <li><strong>BusinessLoclAi</strong>: Should load the Business Local AI project successfully without DOM errors</li>
+                <li><strong>Complex URL</strong>: Should map to DIYAPP and load successfully without DOM errors</li>
+                <li><strong>Invalid Project</strong>: Should show error page with available projects (DOM structure preserved)</li>
+                <li><strong>No Project ID</strong>: Should show project selector</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>What Was Fixed</h3>
+            <ul>
+                <li><strong>DOM Element Errors</strong>: Fixed by preserving original HTML structure when showing error pages</li>
+                <li><strong>Project ID Mapping</strong>: Enhanced to handle complex URLs and map them to correct project names</li>
+                <li><strong>Error Handling</strong>: Improved to show user-friendly error pages without breaking the DOM structure</li>
+                <li><strong>Content Restoration</strong>: Added logic to restore original content when projects are successfully loaded</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>Console Monitoring</h3>
+            <p>Open your browser's developer console (F12) and watch for:</p>
+            <ul>
+                <li><strong>✅ Success</strong>: "Project data loaded from GitHub" followed by "Project data rendering completed successfully"</li>
+                <li><strong>❌ Error</strong>: "Element with ID 'project-title' not found" (should no longer appear)</li>
+                <li><strong>⚠️ SES Warnings</strong>: These are external and can be ignored</li>
+            </ul>
+        </div>
+    </div>
+
+    <style>
+        .test-section {
+            background: white;
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-links {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .test-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: #f8fafc;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #1f2937;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .test-link:hover {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+        }
+        
+        .test-link i {
+            font-size: 1.2rem;
+        }
+        
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        li:last-child {
+            border-bottom: none;
+        }
+        
+        strong {
+            color: #10b981;
+        }
+        
+        h1 {
+            color: #1f2937;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        h3 {
+            color: #374151;
+            margin-bottom: 1rem;
+        }
+    </style>
+</body>
+</html>

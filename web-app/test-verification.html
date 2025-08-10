@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Normalization Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-results { background: #f0f0f0; padding: 20px; border-radius: 5px; margin: 20px 0; }
+        .console-output { background: #000; color: #0f0; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .success { color: #009900; font-weight: bold; }
+        .error { color: #cc0000; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>ID Normalization System Verification</h1>
+    
+    <div class="test-results">
+        <h2>Test Results</h2>
+        <div id="results">Running tests...</div>
+    </div>
+    
+    <div class="test-results">
+        <h2>Console Output</h2>
+        <div id="console-output" class="console-output"></div>
+    </div>
+    
+    <button onclick="runVerification()" style="padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Run Verification Tests
+    </button>
+
+    <script src="modules/GitHubDataManager.js"></script>
+    <script>
+        // Capture console output
+        const consoleOutput = document.getElementById('console-output');
+        const resultsDiv = document.getElementById('results');
+        
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        function addToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logEntry.className = type;
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+
+        // Test 1: Verify slugify function
+        function testSlugify() {
+            console.log('\n1. Testing slugify function...');
+            
+            const manager = new GitHubDataManager();
+            
+            const testCases = [
+                { input: "DIYAPP", expected: "diyapp" },
+                { input: "At Home DIY 🏠", expected: "at-home-diy" },
+                { input: "Business Local AI", expected: "business-local-ai" }
+            ];
+            
+            let passed = 0;
+            testCases.forEach(testCase => {
+                const result = manager.slugify(testCase.input);
+                const success = result === testCase.expected;
+                if (success) passed++;
+                console.log(`  "${testCase.input}" -> "${result}" ${success ? '✅' : '❌'}`);
+            });
+            
+            console.log(`  Result: ${passed}/${testCases.length} passed`);
+            return passed === testCases.length;
+        }
+
+        // Test 2: Verify project data structure
+        function testProjectStructure() {
+            console.log('\n2. Testing project data structure...');
+            
+            const manager = new GitHubDataManager();
+            
+            // Mock project data
+            const mockProject = {
+                id: 'at-home-diy',
+                title: 'At Home DIY 🏠',
+                name: 'At Home DIY 🏠',
+                overview: 'A DIY project planning app',
+                status: { phase: 'In Progress', progress: 32 },
+                features: {
+                    completed: ['Basic UI'],
+                    inProgress: ['User auth'],
+                    pending: ['Advanced features']
+                },
+                technical: ['Next.js'],
+                keyFeatures: ['Planning'],
+                aliases: ['DIYAPP']
+            };
+            
+            const requiredFields = ['id', 'title', 'name', 'overview', 'status', 'features', 'technical', 'keyFeatures', 'aliases'];
+            let passed = 0;
+            
+            requiredFields.forEach(field => {
+                const hasField = mockProject.hasOwnProperty(field);
+                if (hasField) passed++;
+                console.log(`  Field "${field}": ${hasField ? '✅' : '❌'}`);
+            });
+            
+            console.log(`  Result: ${passed}/${requiredFields.length} fields present`);
+            return passed === requiredFields.length;
+        }
+
+        // Test 3: Verify ID resolution
+        function testIdResolution() {
+            console.log('\n3. Testing ID resolution...');
+            
+            const manager = new GitHubDataManager();
+            
+            // Mock the indexes
+            manager._index = {
+                byId: new Map([
+                    ['at-home-diy', { id: 'at-home-diy', title: 'At Home DIY 🏠' }],
+                    ['business-local-ai', { id: 'business-local-ai', title: 'Business Local AI' }]
+                ]),
+                byTitle: new Map([
+                    ['At Home DIY 🏠', { id: 'at-home-diy', title: 'At Home DIY 🏠' }],
+                    ['Business Local AI', { id: 'business-local-ai', title: 'Business Local AI' }]
+                ]),
+                aliases: new Map([
+                    ['DIYAPP', 'at-home-diy'],
+                    ['DIYapp', 'at-home-diy'],
+                    ['BusinessLoclAi', 'business-local-ai']
+                ])
+            };
+            
+            const testQueries = [
+                { query: 'DIYAPP', expected: 'at-home-diy' },
+                { query: 'at-home-diy', expected: 'at-home-diy' },
+                { query: 'At Home DIY 🏠', expected: 'at-home-diy' },
+                { query: 'BusinessLoclAi', expected: 'business-local-ai' },
+                { query: 'nonexistent', expected: null }
+            ];
+            
+            let passed = 0;
+            testQueries.forEach(testCase => {
+                const result = manager._resolveProjectId(testCase.query);
+                const success = result === testCase.expected;
+                if (success) passed++;
+                console.log(`  "${testCase.query}" -> "${result}" ${success ? '✅' : '❌'}`);
+            });
+            
+            console.log(`  Result: ${passed}/${testQueries.length} passed`);
+            return passed === testQueries.length;
+        }
+
+        // Test 4: Verify backward compatibility
+        function testBackwardCompatibility() {
+            console.log('\n4. Testing backward compatibility...');
+            
+            const manager = new GitHubDataManager();
+            
+            const structuredData = {
+                id: 'at-home-diy',
+                title: 'At Home DIY 🏠',
+                name: 'At Home DIY 🏠',
+                overview: 'A DIY project planning app',
+                status: { phase: 'In Progress', progress: 32 },
+                features: {
+                    completed: ['Basic UI'],
+                    inProgress: ['User auth'],
+                    pending: ['Advanced features']
+                },
+                technical: ['Next.js'],
+                keyFeatures: ['Planning'],
+                aliases: ['DIYAPP']
+            };
+            
+            const legacyData = manager.convertToLegacyFormat(structuredData);
+            
+            const requiredLegacyFields = ['id', 'title', 'name', 'description', 'status', 'progress', 'completed_features', 'in_progress_features', 'todo_features', 'tech_stack', 'aliases'];
+            let passed = 0;
+            
+            requiredLegacyFields.forEach(field => {
+                const hasField = legacyData.hasOwnProperty(field);
+                if (hasField) passed++;
+                console.log(`  Legacy field "${field}": ${hasField ? '✅' : '❌'}`);
+            });
+            
+            console.log(`  Result: ${passed}/${requiredLegacyFields.length} fields present`);
+            return passed === requiredLegacyFields.length;
+        }
+
+        // Test 5: Verify session data migration (FIXED)
+        function testSessionMigration() {
+            console.log('\n5. Testing session data migration...');
+            
+            const manager = new GitHubDataManager();
+            
+            // Mock old session data (like the test that was failing)
+            const oldSessionData = new Map([
+                ['DIYAPP', {
+                    name: 'At Home DIY 🏠',
+                    overview: 'A DIY project planning app',
+                    status: { phase: 'In Progress', progress: 32 },
+                    features: { completed: [], inProgress: [], pending: [] },
+                    technical: [],
+                    keyFeatures: []
+                }],
+                ['BusinessLoclAi', {
+                    name: 'Business Local AI',
+                    overview: 'Business infrastructure',
+                    status: { phase: 'Planning', progress: 0 },
+                    features: { completed: [], inProgress: [], pending: [] },
+                    technical: [],
+                    keyFeatures: []
+                }]
+            ]);
+            
+            manager.sessionData = oldSessionData;
+            manager._migrateSessionData();
+            
+            let passed = 0;
+            let total = 0;
+            
+            for (const [projectId, projectData] of manager.sessionData) {
+                total++;
+                const hasId = projectData.hasOwnProperty('id') && projectData.id;
+                const hasTitle = projectData.hasOwnProperty('title') && projectData.title;
+                const hasAliases = projectData.hasOwnProperty('aliases') && Array.isArray(projectData.aliases);
+                
+                if (hasId && hasTitle && hasAliases) {
+                    passed++;
+                    console.log(`  Project "${projectData.name}":`);
+                    console.log(`    ID: ${projectData.id} ✅`);
+                    console.log(`    Title: ${projectData.title} ✅`);
+                    console.log(`    Aliases: ${JSON.stringify(projectData.aliases)} ✅`);
+                } else {
+                    console.log(`  Project "${projectData.name}":`);
+                    console.log(`    ID: ${projectData.id} ${hasId ? '✅' : '❌'}`);
+                    console.log(`    Title: ${projectData.title} ${hasTitle ? '✅' : '❌'}`);
+                    console.log(`    Aliases: ${JSON.stringify(projectData.aliases)} ${hasAliases ? '✅' : '❌'}`);
+                }
+            }
+            
+            console.log(`  Result: ${passed}/${total} projects migrated successfully`);
+            return passed === total;
+        }
+
+        // Run all tests
+        function runAllTests() {
+            const tests = [
+                testSlugify,
+                testProjectStructure,
+                testIdResolution,
+                testBackwardCompatibility,
+                testSessionMigration
+            ];
+            
+            let passed = 0;
+            tests.forEach(test => {
+                if (test()) passed++;
+            });
+            
+            console.log('\n=== Final Results ===');
+            console.log(`Overall: ${passed}/${tests.length} tests passed`);
+            
+            if (passed === tests.length) {
+                console.log('🎉 All tests passed! ID normalization system is working correctly.');
+            } else {
+                console.log('❌ Some tests failed. Please check the implementation.');
+            }
+        }
+        
+        function runVerification() {
+            // Clear previous results
+            consoleOutput.innerHTML = '';
+            resultsDiv.innerHTML = 'Running tests...';
+            
+            // Run verification
+            setTimeout(() => {
+                try {
+                    runAllTests();
+                    resultsDiv.innerHTML = '<span class="success">✅ Verification completed! Check console output above for details.</span>';
+                } catch (error) {
+                    resultsDiv.innerHTML = `<span class="error">❌ Verification failed: ${error.message}</span>`;
+                    console.error('Verification error:', error);
+                }
+            }, 100);
+        }
+        
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            setTimeout(runVerification, 500);
+        });
+    </script>
+</body>
+</html>

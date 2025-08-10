@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Cache Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        .info { background-color: #d1ecf1; }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>GitHubDataManager Session Cache Test</h1>
+    
+    <div class="test-section info">
+        <h3>Test Controls</h3>
+        <button class="btn-primary" onclick="testInitialization()">Test Initialization</button>
+        <button class="btn-success" onclick="testDataAccess()">Test Data Access</button>
+        <button class="btn-warning" onclick="testSessionStorage()">Test Session Storage</button>
+        <button class="btn-primary" onclick="clearSession()">Clear Session</button>
+        <button class="btn-warning" onclick="refreshData()">Refresh Data</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script src="modules/GitHubDataManager.js"></script>
+    <script>
+        let githubDataManager = null;
+        const resultsDiv = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `test-section ${type}`;
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            resultsDiv.appendChild(logEntry);
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        async function testInitialization() {
+            try {
+                log('Starting initialization test...', 'info');
+                
+                githubDataManager = new GitHubDataManager();
+                log('GitHubDataManager instance created', 'success');
+                
+                await githubDataManager.initialize();
+                log('GitHubDataManager initialized successfully', 'success');
+                
+                const stats = githubDataManager.getSessionStats();
+                log(`Session stats: ${JSON.stringify(stats, null, 2)}`, 'info');
+                
+            } catch (error) {
+                log(`Initialization failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDataAccess() {
+            if (!githubDataManager) {
+                log('GitHubDataManager not initialized. Run initialization test first.', 'error');
+                return;
+            }
+
+            try {
+                log('Testing data access methods...', 'info');
+                
+                // Test legacy format
+                const allProjects = githubDataManager.getAllProjects();
+                log(`Found ${allProjects.length} projects (legacy format)`, 'success');
+                
+                // Test new structured format
+                const structuredProjects = githubDataManager.getAllProjectsStructured();
+                log(`Found ${structuredProjects.length} projects (structured format)`, 'success');
+                
+                // Test individual project access
+                if (allProjects.length > 0) {
+                    const firstProject = allProjects[0];
+                    const projectId = firstProject.id || firstProject.name;
+                    
+                    const legacyData = githubDataManager.getProjectData(projectId);
+                    const structuredData = githubDataManager.getProjectById(projectId);
+                    
+                    log(`Project ${projectId} data retrieved:`, 'success');
+                    log(`Legacy format: ${JSON.stringify(legacyData, null, 2)}`, 'info');
+                    log(`Structured format: ${JSON.stringify(structuredData, null, 2)}`, 'info');
+                }
+                
+            } catch (error) {
+                log(`Data access test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testSessionStorage() {
+            try {
+                log('Testing session storage...', 'info');
+                
+                const sessionData = sessionStorage.getItem('githubProjectData');
+                if (sessionData) {
+                    const parsed = JSON.parse(sessionData);
+                    log(`Session storage contains data for ${Object.keys(parsed).length} projects`, 'success');
+                    log(`Session data keys: ${Object.keys(parsed).join(', ')}`, 'info');
+                } else {
+                    log('No session data found in sessionStorage', 'warning');
+                }
+                
+            } catch (error) {
+                log(`Session storage test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function clearSession() {
+            try {
+                log('Clearing session storage...', 'info');
+                sessionStorage.removeItem('githubProjectData');
+                log('Session storage cleared', 'success');
+                
+                if (githubDataManager) {
+                    githubDataManager = null;
+                    log('GitHubDataManager instance cleared', 'success');
+                }
+                
+            } catch (error) {
+                log(`Failed to clear session: ${error.message}`, 'error');
+            }
+        }
+
+        async function refreshData() {
+            if (!githubDataManager) {
+                log('GitHubDataManager not initialized. Run initialization test first.', 'error');
+                return;
+            }
+
+            try {
+                log('Refreshing project data...', 'info');
+                await githubDataManager.refreshProjectData();
+                log('Project data refreshed successfully', 'success');
+                
+                const stats = githubDataManager.getSessionStats();
+                log(`Updated session stats: ${JSON.stringify(stats, null, 2)}`, 'info');
+                
+            } catch (error) {
+                log(`Data refresh failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run initialization test on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, starting auto-test...', 'info');
+            setTimeout(testInitialization, 1000);
+        });
+    </script>
+</body>
+</html>
