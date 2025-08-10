@@ -22,7 +22,7 @@ class GitHubDataManager {
                 name: 'BusinessLoclAi',
                 owner: 'Anickzs',
                 branch: 'main',
-                projectDetailsPath: 'project_details.md'
+                projectDetailsPath: 'ProjectDetails.md'
             }
         ];
         
@@ -35,7 +35,7 @@ class GitHubDataManager {
         });
         this._projectRepo.set('businesslocalai-project-details', {
             owner: 'Anickzs',
-            repo: 'BusinessLoclAi',
+            repo: 'BusinessLocalAI',
             basePath: '' // file is at repo root
         });
     }
@@ -603,6 +603,214 @@ class GitHubDataManager {
     }
 
     /**
+     * Robust markdown parser that supports both "## Sections" and "Label: Value" formats
+     * @param {string} markdown - Raw markdown content
+     * @returns {Object} Parsed project data
+     */
+    parseProjectMarkdown(markdown) {
+        const text = markdown || "";
+
+        const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const grabSection = (titles) => {
+            const t = titles.map(esc).join("|");
+            // Handle both standard format and emoji/bold format
+            const re = new RegExp(`(?:^|\\n)##\\s*[🎯✅🚧📊]*\\s*\\*\\*(?:${t})\\*\\*\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, "i");
+            let m = text.match(re);
+            if (!m) {
+                // Fallback to standard format
+                const re2 = new RegExp(`(?:^|\\n)##\\s*(?:${t})\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, "i");
+                m = text.match(re2);
+            }
+            return m ? m[1].trim() : "";
+        };
+        const grabLabel = (labels) => {
+            const t = labels.map(esc).join("|");
+            const re = new RegExp(`(?:^|\\n)\\s*(?:${t})\\s*[:\\-]\\s*([^\\n]+)`, "i");
+            const m = text.match(re);
+            return m ? m[1].trim() : "";
+        };
+
+        const title = (text.match(/^\s*#\s+(.+)\s*$/m) || [,""])[1].trim();
+
+        // Try label-based overview first, then section-based
+        const overviewLabel = grabLabel(["Project Overview", "Overview"]);
+        const overviewSec = grabSection(["Overview","Project Overview","Summary"]);
+        const overview = overviewLabel || overviewSec || "";
+        
+        // Try label-based status first, then extract from section
+        const statusLabel = grabLabel(["Status","Project Status"]);
+        const statusSection = grabSection(["Status", "Project Status"]);
+        let statusTxt = statusLabel || "";
+        
+        if (!statusTxt && statusSection) {
+            // Look for "Current Phase" in the status section (handle bullet points and bold formatting)
+            const phaseMatch = statusSection.match(/[-*•]\s*\*\*Current Phase\*\*[:\s]*([^\n]+)/i);
+            if (phaseMatch) {
+                statusTxt = phaseMatch[1].trim();
+            } else {
+                // Look for status in the overview section (GitHub format)
+                const overviewSection = grabSection(["PROJECT OVERVIEW", "Project Overview", "Overview"]);
+                if (overviewSection) {
+                    const statusMatch = overviewSection.match(/\*\*Status:\*\*\s*([^\n]+)/i);
+                    if (statusMatch) {
+                        statusTxt = statusMatch[1].trim();
+                    }
+                }
+                
+                if (!statusTxt) {
+                    // Fallback to first line - remove all markdown formatting
+                    const firstLine = statusSection.split(/\n/)[0];
+                    statusTxt = firstLine
+                        .replace(/^[-*•]\s*/, "") // Remove bullet points
+                        .replace(/\*\*([^*]+)\*\*/, "$1") // Remove bold formatting
+                        .replace(/:\s*$/, "") // Remove trailing colon
+                        .trim();
+                }
+            }
+        }
+        
+        const phaseTxt = grabLabel(["Phase","Project Phase"]) || "";
+        let progressTxt = grabLabel(["Progress","Completion"]) || "";
+        
+        // If no progress from label, try to extract from status section
+        if (!progressTxt && statusSection) {
+            const progressMatch = statusSection.match(/[-*•]\s*\*\*Progress\*\*[:\s]*(\d+)%/i);
+            if (progressMatch) {
+                progressTxt = progressMatch[1] + "%";
+            }
+        }
+        
+        // Try to extract progress from overview section (GitHub format)
+        if (!progressTxt) {
+            const overviewSection = grabSection(["PROJECT OVERVIEW", "Project Overview", "Overview"]);
+            if (overviewSection) {
+                const progressMatch = overviewSection.match(/\*\*Status:\*\*\s*[^0-9]*(\d+)%/i);
+                if (progressMatch) {
+                    progressTxt = progressMatch[1] + "%";
+                }
+            }
+        }
+        
+        const lastUpdated = grabLabel(["Last Updated","Updated"]) || null;
+
+        const listFromSec = (sec) => !sec ? [] :
+            sec.split(/\n/).map(l => l.trim())
+               .filter(l => /^[-*+•✅🔄]\s+/.test(l)) // Handle checkmarks and arrows
+               .map(l => l.replace(/^[-*+•✅🔄]\s+/, "").replace(/\*\*([^*]+)\*\*/, "$1").trim())
+               .filter(l => l.length > 0 && !l.startsWith('#'));
+
+        // Try section-based first, then label-based
+        let keyFeatures = listFromSec(grabSection(["Key Features","Features", "COMPLETED FEATURES", "Completed Features"]));
+        let technical = listFromSec(grabSection(["Technical Stack","Technical","Tech Stack","Technology","Stack"]));
+        
+        // If no features from sections, try to find them after labels
+        if (keyFeatures.length === 0) {
+            const featuresMatch = text.match(/Key Features:\s*\n((?:[-*+•]\s+[^\n]+\n?)*)/i);
+            if (featuresMatch) {
+                keyFeatures = listFromSec(featuresMatch[1]);
+            }
+        }
+        
+        if (technical.length === 0) {
+            // Look for Technical Stack label (not in a section)
+            const techMatch = text.match(/Technical Stack:\s*\n((?:[-*+•]\s+[^\n]+\n?)*)/i);
+            if (techMatch && !text.includes('## Technical Stack')) {
+                technical = listFromSec(techMatch[1]);
+            }
+        }
+        
+        // Try to extract tech stack from overview section (GitHub format)
+        if (technical.length === 0) {
+            const overviewSection = grabSection(["PROJECT OVERVIEW", "Project Overview", "Overview"]);
+            if (overviewSection) {
+                const techMatch = overviewSection.match(/\*\*Tech Stack:\*\*\s*([^\n]+)/i);
+                if (techMatch) {
+                    technical = [techMatch[1].trim()];
+                }
+            }
+        }
+
+        const progressMatch = progressTxt.match(/(\d+)\s*%/);
+        const progress = progressMatch ? Number(progressMatch[1]) : (Number(progressTxt) || null);
+
+        return {
+            title: title || "",
+            overview: overview || "",
+            status: statusTxt || "",
+            phase: phaseTxt || "",
+            progress: progress,
+            lastUpdated: lastUpdated || null,
+            keyFeatures: keyFeatures || [],
+            technical: technical || []
+        };
+    }
+
+    /**
+     * Normalize project fields to fill sensible defaults and clamp progress
+     * @param {Object} p - Project data object
+     * @returns {Object} Normalized project data
+     */
+    normalizeProjectFields(p) {
+        const out = { ...p };
+        out.name = out.name || out.title || out.id || "Untitled Project";
+
+        // Handle status - preserve existing status structure if it exists
+        if (out.status && typeof out.status === 'object') {
+            // Status is already an object, preserve it
+            if (!out.status.phase && out.status.phase !== '') {
+                out.status.phase = "Unknown";
+            }
+        } else {
+            // Legacy status handling
+            const s = (out.status || "").toString().toLowerCase();
+            if (!s.trim()) {
+                out.status = { phase: "Unknown", progress: 0 };
+            } else if (s.includes("active") || s.includes("progress") || s.includes("build")) {
+                out.status = { phase: "Active", progress: out.progress || 0 };
+            } else if (s.includes("paused") || s.includes("hold")) {
+                out.status = { phase: "Paused", progress: out.progress || 0 };
+            } else if (s.includes("done") || s.includes("complete") || s.includes("production ready")) {
+                out.status = { phase: "Complete", progress: out.progress || 100 };
+            } else if (s.includes("unknown")) {
+                out.status = { phase: "Unknown", progress: out.progress || 0 };
+            } else {
+                // Keep the original status string as phase
+                out.status = { phase: out.status || "Unknown", progress: out.progress || 0 };
+            }
+        }
+
+        // Ensure status object exists
+        if (!out.status) {
+            out.status = { phase: "Unknown", progress: 0 };
+        }
+
+        // Ensure phase exists
+        if (!out.status.phase) {
+            out.status.phase = "Unknown";
+        }
+
+        // Ensure progress is a number
+        if (typeof out.status.progress !== "number" || isNaN(out.status.progress)) {
+            out.status.progress = 0;
+        }
+        out.status.progress = Math.max(0, Math.min(100, Math.round(out.status.progress)));
+
+        out.lastUpdatedRaw = out.lastUpdated || null;
+
+        out.keyFeatures = Array.isArray(out.keyFeatures) ? out.keyFeatures : [];
+        out.technical   = Array.isArray(out.technical)   ? out.technical   : [];
+
+        // Fallback overview: first paragraph after H1 if Overview section is missing
+        if (!out.overview && typeof p.markdown === "string") {
+            const lines = p.markdown.split(/\n/);
+            const i = lines.findIndex(l => /^#\s+/.test(l));
+            const paras = lines.slice(i + 1).join("\n").split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+            if (paras[0]) out.overview = paras[0];
+        }
+        return out;
+    }
+
+    /**
      * Get fallback structured data for failed fetches
      * @param {string} projectName - Name of the project
      * @param {string} reason - Reason for fallback
@@ -845,32 +1053,32 @@ class GitHubDataManager {
      */
     async _fetchAndMergeDetails(proj, repoInfo) {
         try {
-            // Try candidate paths in order
-            const candidatePaths = [
-                `${repoInfo.basePath}ProjectDetails.md`,
-                `${repoInfo.basePath}project_details.md`
+            // Try candidate paths in order - lowercase first to prevent initial 404
+            const candidates = [
+                { path: "project_details.md", url: `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/main/project_details.md` },
+                { path: "ProjectDetails.md",  url: `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/main/ProjectDetails.md` }
             ];
             
-            for (const relPath of candidatePaths) {
-                const url = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/main/${relPath}`;
-                console.log(`[details] trying`, { id: proj.id, path: relPath, url });
+            for (const candidate of candidates) {
+                console.log(`[ProjectStatus] trying`, { id: proj.id, path: candidate.path, url: candidate.url });
                 
-                const res = await fetch(url, { cache: 'no-store' });
+                const res = await fetch(candidate.url, { cache: 'no-store' });
                 if (res.ok) {
                     const md = await res.text();
-                    const parsed = this.parseMarkdownToStructuredData(md, proj.name || proj.title);
-                    this._mergeProjectData(proj, parsed);
-                    console.debug('[details] used', { id: proj.id, path: relPath });
+                    const parsed = this.parseProjectMarkdown(md);
+                    const normalized = this.normalizeProjectFields(parsed);
+                    this._mergeProjectData(proj, normalized);
+                    console.log('[ProjectStatus] used', { id: proj.id, path: candidate.path });
                     return true;
                 }
             }
             
             // If none succeed, log warning and return false
-            console.warn('[details] no-file-found', { id: proj.id, repoInfo });
+            console.warn('[ProjectStatus] no-file-found', { id: proj.id, repoInfo });
             return false;
             
         } catch (error) {
-            console.error(`Error fetching detailed data for ${proj.id}:`, error);
+            console.error(`[ProjectStatus] Error fetching detailed data for ${proj.id}:`, error);
             return false;
         }
     }
@@ -881,6 +1089,14 @@ class GitHubDataManager {
      * @param {Object} parsedData - Parsed data from markdown
      */
     _mergeProjectData(proj, parsedData) {
+        // Merge title/name
+        if (parsedData.title && !proj.title) {
+            proj.title = parsedData.title;
+        }
+        if (parsedData.name && !proj.name) {
+            proj.name = parsedData.name;
+        }
+        
         // Merge overview/description
         if (parsedData.overview && parsedData.overview !== 'Project overview not available') {
             proj.overview = parsedData.overview;
@@ -888,34 +1104,39 @@ class GitHubDataManager {
         
         // Merge status information
         if (parsedData.status) {
-            proj.status = parsedData.status;
-        }
-        
-        // Merge features
-        if (parsedData.features) {
-            if (!proj.features) proj.features = {};
-            
-            if (Array.isArray(parsedData.features.completed) && parsedData.features.completed.length > 0) {
-                proj.features.completed = parsedData.features.completed;
-            }
-            
-            if (Array.isArray(parsedData.features.inProgress) && parsedData.features.inProgress.length > 0) {
-                proj.features.inProgress = parsedData.features.inProgress;
-            }
-            
-            if (Array.isArray(parsedData.features.pending) && parsedData.features.pending.length > 0) {
-                proj.features.pending = parsedData.features.pending;
+            if (!proj.status) proj.status = {};
+            if (typeof parsedData.status === 'string') {
+                proj.status.phase = parsedData.status;
+            } else {
+                proj.status = parsedData.status;
             }
         }
         
-        // Merge technical stack
-        if (Array.isArray(parsedData.technical) && parsedData.technical.length > 0) {
-            proj.technical = parsedData.technical;
+        // Merge phase
+        if (parsedData.phase) {
+            if (!proj.status) proj.status = {};
+            proj.status.phase = parsedData.phase;
+        }
+        
+        // Merge progress
+        if (typeof parsedData.progress === 'number') {
+            if (!proj.status) proj.status = {};
+            proj.status.progress = parsedData.progress;
+        }
+        
+        // Merge last updated
+        if (parsedData.lastUpdatedRaw) {
+            proj.lastUpdated = parsedData.lastUpdatedRaw;
         }
         
         // Merge key features
         if (Array.isArray(parsedData.keyFeatures) && parsedData.keyFeatures.length > 0) {
             proj.keyFeatures = parsedData.keyFeatures;
+        }
+        
+        // Merge technical stack
+        if (Array.isArray(parsedData.technical) && parsedData.technical.length > 0) {
+            proj.technical = parsedData.technical;
         }
         
         // Update the legacy format cache as well
@@ -924,6 +1145,14 @@ class GitHubDataManager {
         
         // Update session data
         this.sessionData.set(proj.id, proj);
+        
+        console.log('[ProjectStatus] Project data merged successfully:', {
+            id: proj.id,
+            title: proj.title,
+            status: proj.status,
+            features: proj.keyFeatures?.length || 0,
+            tech: proj.technical?.length || 0
+        });
     }
 
     /**

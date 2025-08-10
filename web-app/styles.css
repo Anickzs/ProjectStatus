@@ -2840,3 +2840,8 @@ body {
         padding: 1rem;
     }
 }
+
+/* Utility classes */
+.hidden {
+    display: none !important;
+}

@@ -534,8 +534,18 @@ class ProjectDetailManager {
         };
         
         // Handle new GitHubDataManager structure with status.phase and status.progress
-        const status = project.status?.phase || project.status || project.metadata?.status || project.details?.status || 'Unknown';
-        const phase = project.status?.phase || project.phase || project.metadata?.phase || project.details?.phase || 'Unknown';
+        let status, phase;
+        
+        if (project.status && typeof project.status === 'object') {
+            // New structure: status is an object with phase and progress
+            status = project.status.phase || 'Unknown';
+            phase = project.status.phase || 'Unknown';
+        } else {
+            // Legacy structure: status might be a string
+            status = project.status || project.metadata?.status || project.details?.status || 'Unknown';
+            phase = project.phase || project.metadata?.phase || project.details?.phase || status;
+        }
+        
         const progress = this.clamp(parseProgress(project.status?.progress || project.progress || project.percentComplete || project.metadata?.progress || 0), 0, 100);
         const lastUpdatedRaw = project.lastUpdated || project.last_updated || project.metadata?.lastUpdated || project.metadata?.last_updated || project.details?.lastUpdated || null;
         
@@ -819,16 +829,49 @@ class ProjectDetailManager {
             this.domUtils.safeUpdateElement('project-title', 'textContent', projectName);
             this.domUtils.safeUpdateElement('project-subtitle', 'textContent', this.getProjectSubtitle());
             this.updateProjectIcon();
-            this.domUtils.safeUpdateElement('project-description', 'innerHTML', this.formatDescription(projectDescription));
-            this.domUtils.safeUpdateElement('project-status', 'textContent', normalizedFields.status);
-            this.domUtils.safeUpdateElement('project-phase', 'textContent', normalizedFields.phase);
+            
+            // Overview - hide section if no overview
+            const elOverview = document.getElementById('project-description');
+            if (projectDescription && projectDescription !== 'No description available') {
+                this.domUtils.safeUpdateElement('project-description', 'innerHTML', this.formatDescription(projectDescription));
+            } else {
+                elOverview?.closest('.detail-section')?.classList.add('hidden');
+            }
+            
+            // Status - hide if unknown
+            const elStatus = document.getElementById('project-status');
+            if (normalizedFields.status && normalizedFields.status !== 'Unknown') {
+                this.domUtils.safeUpdateElement('project-status', 'textContent', normalizedFields.status);
+            } else {
+                elStatus?.parentElement?.classList.add('hidden');
+            }
+            
+            // Phase - hide if unknown
+            const elPhase = document.getElementById('project-phase');
+            if (normalizedFields.phase && normalizedFields.phase !== 'Unknown') {
+                this.domUtils.safeUpdateElement('project-phase', 'textContent', normalizedFields.phase);
+            } else {
+                elPhase?.parentElement?.classList.add('hidden');
+            }
+            
+            // Last updated
             this.domUtils.safeUpdateElement('last-updated', 'textContent', this.safeDateLabel(normalizedFields.lastUpdatedRaw));
-            this.updateProgressBar(normalizedFields.progress);
+            
+            // Progress - hide if 0
+            const progressContainer = document.getElementById('project-progress');
+            if (normalizedFields.progress > 0) {
+                this.updateProgressBar(normalizedFields.progress);
+            } else {
+                progressContainer?.parentElement?.classList.add('hidden');
+            }
             
             // Load and render other sections
             this.renderProjectSections();
             
             console.log('Project data rendering completed successfully');
+            
+            // Debug: Show raw project data in console
+            this.debugProjectData();
             
             // Clear loading state after successful rendering
             this.clearLoadingState();
@@ -917,8 +960,16 @@ class ProjectDetailManager {
     }
 
     formatDescription(description) {
-        // Use DataUtils for description formatting
-        return this.dataUtils.formatDate(description);
+        if (!description) return 'No description available';
+        
+        // Convert markdown to HTML for better display
+        return description
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') // Bold text
+            .replace(/\*([^*]+)\*/g, '<em>$1</em>') // Italic text
+            .replace(/✅/g, '<span style="color: #10b981;">✅</span>') // Green checkmark
+            .replace(/🔄/g, '<span style="color: #f59e0b;">🔄</span>') // Orange arrow
+            .replace(/\n/g, '<br>') // Line breaks
+            .replace(/---/g, '<hr>'); // Horizontal rules
     }
 
     getProjectPhase() {
@@ -2187,6 +2238,21 @@ class ProjectDetailManager {
         } else {
             this.loadProjectData();
         }
+    }
+    
+    debugProjectData() {
+        console.log('=== DEBUG PROJECT DATA ===');
+        console.log('Raw project object:', this.currentProject);
+        console.log('Project ID:', this.currentProject.id);
+        console.log('Project Title:', this.currentProject.title);
+        console.log('Project Name:', this.currentProject.name);
+        console.log('Project Overview:', this.currentProject.overview);
+        console.log('Project Status:', this.currentProject.status);
+        console.log('Project Features:', this.currentProject.features);
+        console.log('Project Technical:', this.currentProject.technical);
+        console.log('Project Key Features:', this.currentProject.keyFeatures);
+        console.log('Details Loaded:', this.currentProject._detailsLoaded);
+        console.log('================================');
     }
 
     loadSelectedProject() {

@@ -231,7 +231,7 @@ The system is configured to fetch from these repositories:
 | Repository Name | GitHub URL | Project Details File |
 |----------------|------------|-------------------|
 | DIYapp | https://github.com/Anickzs/DIYapp.git | `ProjectDetails.md` |
-| BusinessLoclAi | https://github.com/Anickzs/BusinessLoclAi.git | `project_details.md` |
+| BusinessLoclAi | https://github.com/Anickzs/BusinessLoclAi.git | `ProjectDetails.md` |
 | AiAutoAgency | https://github.com/Anickzs/AiAutoAgency.git | `ProjectDetails.md` |
 | CryptoTradingBot | https://github.com/Anickzs/CryptoTradingBot.git | `ProjectDetails.md` |
 | StockTradingBot | https://github.com/Anickzs/StockTradingBot.git | `ProjectDetails.md` |

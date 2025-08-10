@@ -41,10 +41,17 @@ ProjectStatus/
 ## 🚀 Quick Start
 
 ### Web Application
-1. **Start a local server**:
-   ```bash
-   cd web-app
-   python3 -m http.server 8000
+🎯 How to Use:
+   ```
+Option 1 - Custom Server (Recommended):
+   ./start-server.sh
+
+Option 2 - Direct Command:
+   cd web-app && python3 server.py 8000
+
+Option 3 - Standard Python Server:
+   cd web-app && python3 -m http.server 8000
+
    ```
 
 2. **Open the dashboard**: Navigate to `http://localhost:8000/index.html`
@@ -138,6 +145,29 @@ Each project section should include:
 - **Version Control**: Track changes to project documentation
 - **Consistent Format**: Standardized structure across all projects
 - **Automatic Processing**: Web app automatically reads and displays the data
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**Broken Pipe Errors in Terminal**
+- These are normal when users close browser tabs or navigate away
+- The custom server (`server.py`) handles these gracefully
+- No action needed - your application is working correctly
+
+**404 Errors for favicon.ico**
+- Fixed by adding inline favicon to HTML files
+- No external favicon file needed
+
+**Server Won't Start**
+- Ensure you're in the `web-app` directory
+- Check if port 8000 is already in use
+- Try a different port: `python3 server.py 8001`
+
+### Performance Tips
+- Use the custom server (`server.py`) for better error handling
+- Check `server.log` for detailed request logs
+- The application includes session caching for improved performance
 
 ## 📚 Documentation
 

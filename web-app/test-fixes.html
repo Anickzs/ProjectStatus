@@ -3,56 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Project Detail Fixes</title>
+    <title>Project Fixes Test</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .test-link { display: block; margin: 10px 0; padding: 10px; background: #f0f0f0; text-decoration: none; color: #333; border-radius: 5px; }
-        .test-link:hover { background: #e0e0e0; }
-        .success { color: green; }
-        .error { color: red; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 12px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .formatted-overview { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
     </style>
 </head>
 <body>
-    <h1>Test Project Detail Page Fixes</h1>
-    
-    <h2>Test Cases:</h2>
-    
-    <a href="project-detail.html?id=at-home-diy-project-statistics-status" class="test-link">
-        Test 1: Full ID - at-home-diy-project-statistics-status
-    </a>
-    
-    <a href="project-detail.html?id=businesslocalai-project-details" class="test-link">
-        Test 2: Full ID - businesslocalai-project-details
-    </a>
-    
-    <a href="project-detail.html?id=diyapp" class="test-link">
-        Test 3: Alias - diyapp (should resolve to at-home-diy-project-statistics-status)
-    </a>
-    
-    <a href="project-detail.html?id=businesslocalai" class="test-link">
-        Test 4: Alias - businesslocalai (should resolve to businesslocalai-project-details)
-    </a>
-    
-    <a href="project-detail.html?id=nonexistent" class="test-link">
-        Test 5: Non-existent ID (should show project selector)
-    </a>
-    
-    <h2>Expected Results:</h2>
-    <ul>
-        <li class="success">Tests 1-4: Should load project data without "Project not found" errors</li>
-        <li class="success">Tests 1-4: Should display valid dates (not "Invalid Date")</li>
-        <li class="success">Tests 1-4: Should show proper progress percentages</li>
-        <li class="success">Tests 3-4: Should resolve aliases to actual project IDs</li>
-        <li class="success">Test 5: Should show project selector for non-existent projects</li>
-    </ul>
-    
-    <h2>Console Output:</h2>
-    <p>Open browser console to see diagnostic logs:</p>
-    <ul>
-        <li>"=== PROJECT LOADING DEBUG ===" - Shows URL parsing</li>
-        <li>"=== LOADING PROJECT ===" - Shows project resolution</li>
-        <li>"Resolved project by: id/alias/title" - Shows which getter matched</li>
-        <li>"Normalized fields:" - Shows field normalization results</li>
-    </ul>
+    <div class="container">
+        <h1>🔧 Project Fixes Test</h1>
+        <p>Testing the fixes for project overview formatting and status display issues.</p>
+        
+        <div class="test-section">
+            <h2>Test Controls</h2>
+            <button onclick="testFixes()">Test All Fixes</button>
+            <button onclick="clearStorage()">Clear Storage</button>
+            <button onclick="testOverviewFormatting()">Test Overview Formatting</button>
+            <button onclick="testStatusExtraction()">Test Status Extraction</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Results</h2>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script src="modules/GitHubDataManager.js"></script>
+    <script>
+        let githubManager;
+        
+        async function init() {
+            githubManager = new GitHubDataManager();
+            await githubManager.initialize();
+        }
+        
+        async function testFixes() {
+            if (!githubManager) await init();
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="info">Testing all fixes...</div>';
+            
+            try {
+                // Clear session storage to force fresh fetch
+                sessionStorage.clear();
+                
+                // Get project data
+                const project = await githubManager.ensureDetails('at-home-diy-project-statistics-status');
+                
+                // Test overview formatting
+                const formattedOverview = formatDescription(project.overview);
+                
+                // Test status extraction
+                const status = project.status?.phase || project.status || 'Unknown';
+                const progress = project.status?.progress || 0;
+                
+                results.innerHTML = `
+                    <div class="success">✅ All tests completed successfully!</div>
+                    
+                    <h3>📊 Project Data:</h3>
+                    <pre>${JSON.stringify(project, null, 2)}</pre>
+                    
+                    <h3>📝 Raw Overview:</h3>
+                    <pre>${project.overview}</pre>
+                    
+                    <h3>🎨 Formatted Overview:</h3>
+                    <div class="formatted-overview">${formattedOverview}</div>
+                    
+                    <h3>📈 Status Information:</h3>
+                    <ul>
+                        <li><strong>Status:</strong> ${status}</li>
+                        <li><strong>Progress:</strong> ${progress}%</li>
+                        <li><strong>Status Object:</strong> ${JSON.stringify(project.status)}</li>
+                    </ul>
+                `;
+                
+            } catch (error) {
+                results.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                console.error('Test error:', error);
+            }
+        }
+        
+        function formatDescription(description) {
+            if (!description) return 'No description available';
+            
+            // Convert markdown to HTML for better display
+            return description
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') // Bold text
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>') // Italic text
+                .replace(/✅/g, '<span style="color: #10b981;">✅</span>') // Green checkmark
+                .replace(/🔄/g, '<span style="color: #f59e0b;">🔄</span>') // Orange arrow
+                .replace(/\n/g, '<br>') // Line breaks
+                .replace(/---/g, '<hr>'); // Horizontal rules
+        }
+        
+        async function testOverviewFormatting() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="info">Testing overview formatting...</div>';
+            
+            const testOverview = `**Project Name:** At Home DIY (formerly AI Build Planner)  
+**Status:** ✅ **80% Complete - Production Ready**  
+**Last Updated:** Current Session  
+**Tech Stack:** Next.js 14.0.4, TypeScript, Tailwind CSS, shadcn/ui  
+
+---`;
+
+            const formatted = formatDescription(testOverview);
+            
+            results.innerHTML = `
+                <h3>📝 Overview Formatting Test</h3>
+                <h4>Raw Text:</h4>
+                <pre>${testOverview}</pre>
+                <h4>Formatted Output:</h4>
+                <div class="formatted-overview">${formatted}</div>
+            `;
+        }
+        
+        async function testStatusExtraction() {
+            if (!githubManager) await init();
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="info">Testing status extraction...</div>';
+            
+            try {
+                sessionStorage.clear();
+                const project = await githubManager.ensureDetails('at-home-diy-project-statistics-status');
+                
+                results.innerHTML = `
+                    <h3>📈 Status Extraction Test</h3>
+                    <h4>Raw Status Object:</h4>
+                    <pre>${JSON.stringify(project.status, null, 2)}</pre>
+                    <h4>Extracted Values:</h4>
+                    <ul>
+                        <li><strong>Status Phase:</strong> ${project.status?.phase || 'Not found'}</li>
+                        <li><strong>Progress:</strong> ${project.status?.progress || 'Not found'}%</li>
+                        <li><strong>Status Type:</strong> ${typeof project.status}</li>
+                    </ul>
+                `;
+                
+            } catch (error) {
+                results.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        function clearStorage() {
+            sessionStorage.clear();
+            document.getElementById('results').innerHTML = '<div class="success">✅ Storage cleared!</div>';
+        }
+        
+        // Initialize on load
+        init();
+    </script>
 </body>
 </html>

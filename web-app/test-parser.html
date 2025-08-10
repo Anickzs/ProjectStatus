@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parser Test</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Markdown Parser Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="testParser()">Test Parser</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script src="modules/GitHubDataManager.js"></script>
+    <script>
+        let githubManager;
+        
+        async function init() {
+            githubManager = new GitHubDataManager();
+            await githubManager.initialize();
+        }
+        
+        async function testParser() {
+            if (!githubManager) await init();
+            
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing parser...</p>';
+            
+            try {
+                // Clear session storage to force fresh fetch
+                sessionStorage.clear();
+                
+                // Get project data
+                const project = await githubManager.ensureDetails('at-home-diy-project-statistics-status');
+                
+                results.innerHTML = `
+                    <h3>Parsed Project Data:</h3>
+                    <pre>${JSON.stringify(project, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                results.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Parser test error:', error);
+            }
+        }
+        
+        function clearStorage() {
+            sessionStorage.clear();
+            document.getElementById('results').innerHTML = '<p>Storage cleared!</p>';
+        }
+        
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
