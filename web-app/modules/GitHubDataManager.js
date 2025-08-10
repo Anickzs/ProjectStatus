@@ -25,6 +25,19 @@ class GitHubDataManager {
                 projectDetailsPath: 'project_details.md'
             }
         ];
+        
+        // Project to repository mapping table
+        this._projectRepo = new Map();
+        this._projectRepo.set('at-home-diy-project-statistics-status', {
+            owner: 'Anickzs',
+            repo: 'DIYapp',
+            basePath: '' // file is at repo root
+        });
+        this._projectRepo.set('businesslocalai-project-details', {
+            owner: 'Anickzs',
+            repo: 'BusinessLoclAi',
+            basePath: '' // file is at repo root
+        });
     }
 
     /**
@@ -785,6 +798,161 @@ class GitHubDataManager {
             initialized: this.initialized,
             cacheSize: this.dataCache.size
         };
+    }
+
+    /**
+     * Ensure project has full details loaded from markdown file
+     * @param {string} idOrAlias - Project ID or alias
+     * @returns {Object|null} Project with full details or null if not found
+     */
+    async ensureDetails(idOrAlias) {
+        const id = this._resolveProjectId(idOrAlias);
+        const proj = id ? this._index.byId.get(id) : null;
+        if (!proj) return null;
+
+        const needsDetails =
+            !proj._detailsLoaded ||
+            proj.overview === 'Project overview not available' ||
+            (!Array.isArray(proj.features?.completed) || proj.features.completed.length === 0) &&
+            (!Array.isArray(proj.features?.inProgress) || proj.features.inProgress.length === 0) &&
+            (!Array.isArray(proj.features?.pending) || proj.features.pending.length === 0);
+
+        if (needsDetails) {
+            console.log(`Fetching detailed data for project: ${id}`);
+            
+            // Lookup repo info using explicit mapping
+            const repoInfo = this._projectRepo?.get(id) || null;
+            if (!repoInfo) {
+                console.warn('[details] no-repo', { id });
+                return proj; // DO NOT set _detailsLoaded
+            }
+            
+            // Try to fetch and merge details
+            const success = await this._fetchAndMergeDetails(proj, repoInfo);
+            if (success) {
+                proj._detailsLoaded = true;
+                this._saveToSession();
+            }
+        }
+        return proj;
+    }
+
+    /**
+     * Fetch and merge detailed project data from markdown file
+     * @param {Object} proj - Project object to enrich
+     * @param {Object} repoInfo - Repository information {owner, repo, basePath}
+     * @returns {boolean} True if successful, false otherwise
+     */
+    async _fetchAndMergeDetails(proj, repoInfo) {
+        try {
+            // Try candidate paths in order
+            const candidatePaths = [
+                `${repoInfo.basePath}ProjectDetails.md`,
+                `${repoInfo.basePath}project_details.md`
+            ];
+            
+            for (const relPath of candidatePaths) {
+                const url = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/main/${relPath}`;
+                console.log(`[details] trying`, { id: proj.id, path: relPath, url });
+                
+                const res = await fetch(url, { cache: 'no-store' });
+                if (res.ok) {
+                    const md = await res.text();
+                    const parsed = this.parseMarkdownToStructuredData(md, proj.name || proj.title);
+                    this._mergeProjectData(proj, parsed);
+                    console.debug('[details] used', { id: proj.id, path: relPath });
+                    return true;
+                }
+            }
+            
+            // If none succeed, log warning and return false
+            console.warn('[details] no-file-found', { id: proj.id, repoInfo });
+            return false;
+            
+        } catch (error) {
+            console.error(`Error fetching detailed data for ${proj.id}:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * Merge parsed markdown data into existing project object
+     * @param {Object} proj - Existing project object
+     * @param {Object} parsedData - Parsed data from markdown
+     */
+    _mergeProjectData(proj, parsedData) {
+        // Merge overview/description
+        if (parsedData.overview && parsedData.overview !== 'Project overview not available') {
+            proj.overview = parsedData.overview;
+        }
+        
+        // Merge status information
+        if (parsedData.status) {
+            proj.status = parsedData.status;
+        }
+        
+        // Merge features
+        if (parsedData.features) {
+            if (!proj.features) proj.features = {};
+            
+            if (Array.isArray(parsedData.features.completed) && parsedData.features.completed.length > 0) {
+                proj.features.completed = parsedData.features.completed;
+            }
+            
+            if (Array.isArray(parsedData.features.inProgress) && parsedData.features.inProgress.length > 0) {
+                proj.features.inProgress = parsedData.features.inProgress;
+            }
+            
+            if (Array.isArray(parsedData.features.pending) && parsedData.features.pending.length > 0) {
+                proj.features.pending = parsedData.features.pending;
+            }
+        }
+        
+        // Merge technical stack
+        if (Array.isArray(parsedData.technical) && parsedData.technical.length > 0) {
+            proj.technical = parsedData.technical;
+        }
+        
+        // Merge key features
+        if (Array.isArray(parsedData.keyFeatures) && parsedData.keyFeatures.length > 0) {
+            proj.keyFeatures = parsedData.keyFeatures;
+        }
+        
+        // Update the legacy format cache as well
+        const legacyData = this.convertToLegacyFormat(proj);
+        this.dataCache.set(proj.id, legacyData);
+        
+        // Update session data
+        this.sessionData.set(proj.id, proj);
+    }
+
+    /**
+     * Invalidate cache for a specific project to force re-fetch
+     * @param {string} idOrAlias - Project ID or alias
+     */
+    invalidateCacheFor(idOrAlias) {
+        const id = this._resolveProjectId(idOrAlias);
+        const proj = id ? this._index.byId.get(id) : null;
+        
+        if (proj) {
+            console.log(`Invalidating cache for project: ${id}`);
+            proj._detailsLoaded = false;
+            delete proj._detailsSource; // Remove source tracking if it exists
+            this._saveToSession();
+        }
+    }
+
+    /**
+     * Save current session data to sessionStorage
+     */
+    _saveToSession() {
+        try {
+            const sessionData = Object.fromEntries(this.sessionData);
+            sessionStorage.setItem('githubProjectData', JSON.stringify(sessionData));
+            console.log('Session data saved to sessionStorage');
+        } catch (error) {
+            console.warn('Failed to save session data:', error);
+        }
     }
 
     // Method to update GitHub username (useful for different users)

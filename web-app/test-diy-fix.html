@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Project Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>DIY Project Enrichment Fix Test</h1>
+    
+    <div class="test-section info">
+        <h3>Test Instructions</h3>
+        <p>This page tests the fix for the DIY project enrichment. The project should now load its markdown from the GitHub repo <code>Anickzs/DIYapp</code> instead of staying on placeholders.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 1: Load DIY Project by ID</h3>
+        <button onclick="testLoadById()">Load by ID: at-home-diy-project-statistics-status</button>
+        <div id="result1"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: Load DIY Project by Alias</h3>
+        <button onclick="testLoadByAlias()">Load by Alias: diyapp</button>
+        <div id="result2"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: Refresh Project Data</h3>
+        <button onclick="testRefresh()">Refresh Project Data</button>
+        <div id="result3"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 4: Check Repository Mapping</h3>
+        <button onclick="testRepoMapping()">Check Repository Mapping</button>
+        <div id="result4"></div>
+    </div>
+
+    <script src="modules/GitHubDataManager.js"></script>
+    <script>
+        let githubDataManager;
+
+        async function initManager() {
+            if (!githubDataManager) {
+                githubDataManager = new GitHubDataManager();
+                await githubDataManager.initialize();
+                console.log('GitHubDataManager initialized');
+            }
+        }
+
+        function displayResult(elementId, success, message, data = null) {
+            const element = document.getElementById(elementId);
+            const className = success ? 'success' : 'error';
+            element.className = `test-section ${className}`;
+            
+            let html = `<h4>${success ? '✅ SUCCESS' : '❌ ERROR'}</h4>`;
+            html += `<p>${message}</p>`;
+            
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            element.innerHTML = html;
+        }
+
+        async function testLoadById() {
+            try {
+                await initManager();
+                
+                const projectId = 'at-home-diy-project-statistics-status';
+                console.log('Testing load by ID:', projectId);
+                
+                const project = await githubDataManager.ensureDetails(projectId);
+                
+                if (project && project._detailsLoaded) {
+                    const hasRealData = project.overview && 
+                                       project.overview !== 'Project overview not available' &&
+                                       project.features && 
+                                       (project.features.completed?.length > 0 || 
+                                        project.features.inProgress?.length > 0 || 
+                                        project.features.pending?.length > 0);
+                    
+                    displayResult('result1', hasRealData, 
+                        hasRealData ? 
+                        'Project loaded successfully with real data from GitHub!' :
+                        'Project loaded but still has placeholder data',
+                        {
+                            id: project.id,
+                            title: project.title,
+                            overview: project.overview?.substring(0, 100) + '...',
+                            detailsLoaded: project._detailsLoaded,
+                            hasFeatures: !!(project.features && Object.keys(project.features).length > 0)
+                        }
+                    );
+                } else {
+                    displayResult('result1', false, 'Project not found or details not loaded');
+                }
+            } catch (error) {
+                displayResult('result1', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testLoadByAlias() {
+            try {
+                await initManager();
+                
+                const alias = 'diyapp';
+                console.log('Testing load by alias:', alias);
+                
+                const project = await githubDataManager.ensureDetails(alias);
+                
+                if (project && project._detailsLoaded) {
+                    const hasRealData = project.overview && 
+                                       project.overview !== 'Project overview not available';
+                    
+                    displayResult('result2', hasRealData, 
+                        hasRealData ? 
+                        'Project loaded successfully by alias with real data!' :
+                        'Project loaded by alias but still has placeholder data',
+                        {
+                            id: project.id,
+                            title: project.title,
+                            overview: project.overview?.substring(0, 100) + '...',
+                            detailsLoaded: project._detailsLoaded
+                        }
+                    );
+                } else {
+                    displayResult('result2', false, 'Project not found by alias or details not loaded');
+                }
+            } catch (error) {
+                displayResult('result2', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testRefresh() {
+            try {
+                await initManager();
+                
+                const projectId = 'at-home-diy-project-statistics-status';
+                console.log('Testing refresh for:', projectId);
+                
+                // First invalidate cache
+                githubDataManager.invalidateCacheFor(projectId);
+                
+                // Then reload
+                const project = await githubDataManager.ensureDetails(projectId);
+                
+                if (project && project._detailsLoaded) {
+                    displayResult('result3', true, 
+                        'Project refreshed successfully!',
+                        {
+                            id: project.id,
+                            title: project.title,
+                            detailsLoaded: project._detailsLoaded,
+                            overview: project.overview?.substring(0, 100) + '...'
+                        }
+                    );
+                } else {
+                    displayResult('result3', false, 'Project refresh failed');
+                }
+            } catch (error) {
+                displayResult('result3', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testRepoMapping() {
+            try {
+                await initManager();
+                
+                const projectId = 'at-home-diy-project-statistics-status';
+                const repoInfo = githubDataManager._projectRepo?.get(projectId);
+                
+                if (repoInfo) {
+                    displayResult('result4', true, 
+                        'Repository mapping found!',
+                        {
+                            projectId: projectId,
+                            repoInfo: repoInfo,
+                            expectedUrl: `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/main/ProjectDetails.md`
+                        }
+                    );
+                } else {
+                    displayResult('result4', false, 'Repository mapping not found');
+                }
+            } catch (error) {
+                displayResult('result4', false, `Error: ${error.message}`);
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', initManager);
+    </script>
+</body>
+</html>

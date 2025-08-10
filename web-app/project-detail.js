@@ -26,8 +26,14 @@ class DOMUtils {
         const element = this.getElement(elementId);
         if (element) {
             try {
-                element[property] = value;
-                return true;
+                // Check if the property exists on the element
+                if (property in element) {
+                    element[property] = value;
+                    return true;
+                } else {
+                    console.warn(`Property '${property}' does not exist on element ${elementId}`);
+                    return false;
+                }
             } catch (error) {
                 console.warn(`Failed to update ${elementId}.${property}:`, error);
                 return false;
@@ -468,7 +474,7 @@ class ProjectDetailManager {
         if (!this.projectId) {
             console.log('No project ID provided in URL, showing project selector');
             this.showProjectSelector();
-            return;
+            return { error: 'No project ID provided' };
         }
 
         // Parse and normalize the project ID
@@ -477,7 +483,7 @@ class ProjectDetailManager {
         if (!targetId) {
             console.log('Project ID is empty after trimming, showing project selector');
             this.showProjectSelector();
-            return;
+            return { error: 'Project ID is empty after trimming' };
         }
 
         console.log('Loading project with target ID:', targetId);
@@ -486,7 +492,7 @@ class ProjectDetailManager {
         this.showLoadingState();
         
         // Use GitHubDataManager to load project data
-        this.loadProject(targetId);
+        return this.loadProject(targetId);
     }
 
     /**
@@ -514,11 +520,30 @@ class ProjectDetailManager {
     normalizeProjectFields(project) {
         if (!project) return {};
         
+        // Helper function to parse progress value
+        const parseProgress = (value) => {
+            if (value === null || value === undefined) return 0;
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+                // Handle percentage strings like "60%" or "60"
+                const cleanValue = value.replace('%', '').trim();
+                const parsed = Number(cleanValue);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+            return 0;
+        };
+        
+        // Handle new GitHubDataManager structure with status.phase and status.progress
+        const status = project.status?.phase || project.status || project.metadata?.status || project.details?.status || 'Unknown';
+        const phase = project.status?.phase || project.phase || project.metadata?.phase || project.details?.phase || 'Unknown';
+        const progress = this.clamp(parseProgress(project.status?.progress || project.progress || project.percentComplete || project.metadata?.progress || 0), 0, 100);
+        const lastUpdatedRaw = project.lastUpdated || project.last_updated || project.metadata?.lastUpdated || project.metadata?.last_updated || project.details?.lastUpdated || null;
+        
         return {
-            status: project.status || project.metadata?.status || project.details?.status || 'Unknown',
-            phase: project.phase || project.metadata?.phase || project.details?.phase || 'Unknown',
-            progress: this.clamp(Number(project.progress || project.percentComplete || project.metadata?.progress || 0), 0, 100),
-            lastUpdatedRaw: project.lastUpdated || project.last_updated || project.metadata?.lastUpdated || project.metadata?.last_updated || project.details?.lastUpdated || null
+            status: status,
+            phase: phase,
+            progress: progress,
+            lastUpdatedRaw: lastUpdatedRaw
         };
     }
 
@@ -542,29 +567,16 @@ class ProjectDetailManager {
             if (window.githubDataManager && window.githubDataManager.initialized) {
                 console.log('Using GitHub data manager...');
                 
-                // Try to resolve the project using GitHubDataManager's resolution system
-                const projectData = window.githubDataManager.getProjectData(id);
+                // Ensure project has full details loaded from markdown
+                const project = await window.githubDataManager.ensureDetails(id);
+                if (!project) return this.showProjectNotFoundError();
                 
-                if (projectData) {
-                    this.currentProject = projectData;
-                    console.log('Project data loaded successfully');
-                    console.log('Resolved project by: id/alias/title');
-                    console.log('Project object keys:', Object.keys(this.currentProject));
-                    this.renderProjectData();
-                    return;
-                } else {
-                    // Project not found - show available projects
-                    const availableProjects = window.githubDataManager.getAllProjects();
-                    console.log(`Project "${id}" not found. Available projects:`, 
-                        availableProjects.map(p => p.id));
-                    
-                    // Clear loading state
-                    this.clearLoadingState();
-                    
-                    // Show error with option to select from available projects
-                    this.showProjectNotFoundError();
-                    return;
-                }
+                this.currentProject = project;
+                console.log('Project data loaded successfully with full details');
+                console.log('Resolved project by: id/alias/title');
+                console.log('Project object keys:', Object.keys(this.currentProject));
+                this.renderProjectData(project);
+                return;
             } else {
                 throw new Error('GitHub data manager not available');
             }
@@ -801,10 +813,13 @@ class ProjectDetailManager {
             console.log('Normalized fields:', normalizedFields);
             
             // Use DOMUtils batch update for better performance
-            this.domUtils.safeUpdateElement('project-title', 'textContent', this.currentProject.name);
+            const projectName = this.currentProject.name || this.currentProject.title || 'Project';
+            const projectDescription = this.currentProject.overview || this.currentProject.description || this.currentProject.short_description || 'No description available';
+            
+            this.domUtils.safeUpdateElement('project-title', 'textContent', projectName);
             this.domUtils.safeUpdateElement('project-subtitle', 'textContent', this.getProjectSubtitle());
             this.updateProjectIcon();
-            this.domUtils.safeUpdateElement('project-description', 'innerHTML', this.formatDescription(this.currentProject.description || this.currentProject.short_description || 'No description available'));
+            this.domUtils.safeUpdateElement('project-description', 'innerHTML', this.formatDescription(projectDescription));
             this.domUtils.safeUpdateElement('project-status', 'textContent', normalizedFields.status);
             this.domUtils.safeUpdateElement('project-phase', 'textContent', normalizedFields.phase);
             this.domUtils.safeUpdateElement('last-updated', 'textContent', this.safeDateLabel(normalizedFields.lastUpdatedRaw));
@@ -865,11 +880,12 @@ class ProjectDetailManager {
     }
 
     getProjectSubtitle() {
-        if (this.currentProject.status === 'completed') {
+        const projectStatus = this.currentProject.status?.phase || this.currentProject.status;
+        if (projectStatus === 'completed' || projectStatus === 'Completed') {
             return 'Project Completed';
-        } else if (this.currentProject.status === 'in-progress') {
+        } else if (projectStatus === 'in-progress' || projectStatus === 'In Progress') {
             return 'Active Development';
-        } else if (this.currentProject.status === 'planning') {
+        } else if (projectStatus === 'planning' || projectStatus === 'Planning') {
             return 'Planning Phase';
         } else {
             return 'Project Status';
@@ -883,7 +899,7 @@ class ProjectDetailManager {
             return;
         }
         
-        const projectName = this.currentProject.name.toLowerCase();
+        const projectName = (this.currentProject.name || this.currentProject.title || '').toLowerCase();
         
         let iconClass = 'fas fa-project-diagram'; // default
         
@@ -907,7 +923,7 @@ class ProjectDetailManager {
 
     getProjectPhase() {
         // Use GitHub data for project phase determination
-        return this.currentProject.status || 'Unknown';
+        return this.currentProject.status?.phase || this.currentProject.status || 'Unknown';
     }
 
     getLastUpdated() {
@@ -926,7 +942,7 @@ class ProjectDetailManager {
         }
         
         // Use provided progress or fall back to project data
-        const progressValue = progress !== null ? progress : (this.currentProject.progress || 0);
+        const progressValue = progress !== null ? progress : (this.currentProject.status?.progress || this.currentProject.progress || 0);
         progressFill.style.width = `${progressValue}%`;
         progressText.textContent = `${progressValue}% Complete`;
         
@@ -942,7 +958,8 @@ class ProjectDetailManager {
             return;
         }
         
-        console.log('Loading tasks for project:', this.currentProject.name);
+        const projectName = this.currentProject.name || this.currentProject.title || 'Project';
+        console.log('Loading tasks for project:', projectName);
         
         // Generate tasks based on project data
         const tasks = this.generateTasksFromProject();
@@ -962,8 +979,18 @@ class ProjectDetailManager {
                 return this.currentProject.tasks;
             }
             
-            // Fallback to generating tasks from project features
-            console.log('Generating tasks from project features');
+            // Check for new GitHubDataManager structure with features
+            if (this.currentProject.features) {
+                console.log('Using features from GitHub data');
+                return {
+                    completed: this.currentProject.features.completed || [],
+                    inProgress: this.currentProject.features.inProgress || [],
+                    pending: this.currentProject.features.pending || []
+                };
+            }
+            
+            // Fallback to generating tasks from project features (legacy structure)
+            console.log('Generating tasks from project features (legacy)');
             return this.generateBasicTasks();
         } catch (error) {
             console.error('Error generating tasks from project:', error);
@@ -989,10 +1016,11 @@ class ProjectDetailManager {
             pending: []
         };
 
-        // Safely check for completed features
-        if (this.currentProject.completed_features && Array.isArray(this.currentProject.completed_features)) {
+        // Safely check for completed features (handle both new and legacy structures)
+        const completedFeatures = this.currentProject.features?.completed || this.currentProject.completed_features;
+        if (completedFeatures && Array.isArray(completedFeatures)) {
             // Convert completed features to completed tasks with better organization
-            this.currentProject.completed_features.forEach((feature, index) => {
+            completedFeatures.forEach((feature, index) => {
                 if (typeof feature === 'string' && feature.trim()) {
                     const priority = this.determineTaskPriority(feature);
                     tasks.completed.push({
@@ -1001,57 +1029,59 @@ class ProjectDetailManager {
                         description: feature,
                         status: 'completed',
                         priority: priority,
-                        project: this.currentProject.name,
+                        project: this.currentProject.name || this.currentProject.title,
                         completedDate: this.getLastUpdated()
                     });
                 }
             });
         } else {
-            console.log('No completed features found or invalid format:', this.currentProject.completed_features);
+            console.log('No completed features found or invalid format:', completedFeatures);
         }
 
         // Generate in-progress tasks based on project status
-        if (this.currentProject.status === 'in-progress') {
+        const projectStatus = this.currentProject.status?.phase || this.currentProject.status;
+        if (projectStatus === 'in-progress' || projectStatus === 'In Progress') {
             tasks.inProgress.push({
                 id: 'in-progress-1',
                 title: 'Continue Development',
                 description: 'Continue working on core features and implementation',
                 status: 'in-progress',
                 priority: 'high',
-                project: this.currentProject.name,
+                project: this.currentProject.name || this.currentProject.title,
                 dueDate: 'Ongoing'
             });
         }
 
         // Generate pending tasks based on project type and status
-        if (this.currentProject.name.toLowerCase().includes('diy')) {
+        const projectName = this.currentProject.name || this.currentProject.title || '';
+        if (projectName.toLowerCase().includes('diy')) {
             tasks.pending.push({
                 id: 'pending-1',
                 title: 'User Testing',
                 description: 'Conduct user testing and gather feedback',
                 status: 'pending',
                 priority: 'medium',
-                project: this.currentProject.name,
+                project: projectName,
                 dueDate: 'Next Week'
             });
-        } else if (this.currentProject.name.toLowerCase().includes('server')) {
+        } else if (projectName.toLowerCase().includes('server')) {
             tasks.pending.push({
                 id: 'pending-1',
                 title: 'Deployment Setup',
                 description: 'Set up production deployment and monitoring',
                 status: 'pending',
                 priority: 'high',
-                project: this.currentProject.name,
+                project: projectName,
                 dueDate: 'Next Week'
             });
-        } else if (this.currentProject.name.toLowerCase().includes('email')) {
+        } else if (projectName.toLowerCase().includes('email')) {
             tasks.pending.push({
                 id: 'pending-1',
                 title: 'API Integration',
                 description: 'Complete Gmail OAuth2 and API integration',
                 status: 'pending',
                 priority: 'high',
-                project: this.currentProject.name,
+                project: projectName,
                 dueDate: 'Next Week'
             });
         }
@@ -1063,7 +1093,7 @@ class ProjectDetailManager {
             description: 'Update project documentation and user guides',
             status: 'pending',
             priority: 'medium',
-            project: this.currentProject.name,
+            project: projectName,
             dueDate: 'Ongoing'
         });
 
@@ -1283,8 +1313,10 @@ class ProjectDetailManager {
     generateTimelineFromProject() {
         // Use GitHub data for timeline generation
         try {
-            const completedFeatures = this.currentProject.completed_features || [];
+            // Handle both new and legacy data structures
+            const completedFeatures = this.currentProject.features?.completed || this.currentProject.completed_features || [];
             const completedCount = completedFeatures.length;
+            const projectName = this.currentProject.name || this.currentProject.title || 'Project';
 
             const timeline = [];
 
@@ -1292,7 +1324,7 @@ class ProjectDetailManager {
             timeline.push({
                 id: 'milestone-1',
                 title: 'Project Started',
-                description: `${this.currentProject.name} project was initiated`,
+                description: `${projectName} project was initiated`,
                 date: this.getLastUpdated(),
                 type: 'start'
             });
@@ -1329,7 +1361,8 @@ class ProjectDetailManager {
             }
 
             // Add status-based milestones
-            if (this.currentProject.status === 'in-progress') {
+            const projectStatus = this.currentProject.status?.phase || this.currentProject.status;
+            if (projectStatus === 'in-progress' || projectStatus === 'In Progress') {
                 timeline.push({
                     id: 'milestone-status',
                     title: 'Development Active',
@@ -1340,7 +1373,7 @@ class ProjectDetailManager {
             }
 
             // Add progress-based milestones
-            const progress = this.currentProject.progress || 0;
+            const progress = this.currentProject.status?.progress || this.currentProject.progress || 0;
             if (progress >= 25 && progress < 50) {
                 timeline.push({
                     id: 'milestone-progress-1',
@@ -1522,16 +1555,18 @@ class ProjectDetailManager {
             const activities = [];
 
             // Add recent project updates
+            const progress = this.currentProject.status?.progress || this.currentProject.progress || 0;
             activities.push({
                 id: 'activity-1',
                 type: 'update',
-                message: `Project progress updated to ${this.currentProject.progress || 0}%`,
+                message: `Project progress updated to ${progress}%`,
                 time: 'Just now'
             });
 
-            // Add feature completion activities
-            if (this.currentProject.completed_features) {
-                const recentFeatures = this.currentProject.completed_features.slice(-3); // Last 3 features
+            // Add feature completion activities (handle both new and legacy structures)
+            const completedFeatures = this.currentProject.features?.completed || this.currentProject.completed_features;
+            if (completedFeatures) {
+                const recentFeatures = completedFeatures.slice(-3); // Last 3 features
                 recentFeatures.forEach((feature, index) => {
                     if (typeof feature === 'string' && feature.trim()) {
                         activities.push({
@@ -1545,11 +1580,12 @@ class ProjectDetailManager {
             }
 
             // Add status change activity
-            if (this.currentProject.status) {
+            const projectStatus = this.currentProject.status?.phase || this.currentProject.status;
+            if (projectStatus) {
                 activities.push({
                     id: 'activity-status',
                     type: 'status',
-                    message: `Project status set to: ${this.currentProject.status}`,
+                    message: `Project status set to: ${projectStatus}`,
                     time: 'Today'
                 });
             }
@@ -1574,16 +1610,18 @@ class ProjectDetailManager {
         const activities = [];
         
         // Add recent project updates
+        const progress = this.currentProject.status?.progress || this.currentProject.progress || 0;
         activities.push({
             id: 'activity-1',
             type: 'update',
-            message: `Project progress updated to ${this.currentProject.progress || 0}%`,
+            message: `Project progress updated to ${progress}%`,
             time: 'Just now'
         });
 
-        // Add feature completion activities
-        if (this.currentProject.completed_features) {
-            const recentFeatures = this.currentProject.completed_features.slice(-3); // Last 3 features
+        // Add feature completion activities (handle both new and legacy structures)
+        const completedFeatures = this.currentProject.features?.completed || this.currentProject.completed_features;
+        if (completedFeatures) {
+            const recentFeatures = completedFeatures.slice(-3); // Last 3 features
             recentFeatures.forEach((feature, index) => {
                 if (typeof feature === 'string' && feature.trim()) {
                     activities.push({
@@ -1597,11 +1635,12 @@ class ProjectDetailManager {
         }
 
         // Add status change activity
-        if (this.currentProject.status) {
+        const projectStatus = this.currentProject.status?.phase || this.currentProject.status;
+        if (projectStatus) {
             activities.push({
                 id: 'activity-status',
                 type: 'status',
-                message: `Project status set to: ${this.currentProject.status}`,
+                message: `Project status set to: ${projectStatus}`,
                 time: 'Today'
             });
         }
@@ -2137,10 +2176,14 @@ class ProjectDetailManager {
         return this.currentProject.status || 'Unknown';
     }
 
-    refreshProjectData() {
+    async refreshProjectData() {
         this.notificationManager.showNotification('Refreshing project data...', 'info');
-        if (this.projectId) {
-            this.loadProject(this.projectId);
+        if (this.projectId && window.githubDataManager) {
+            // Invalidate cache for this specific project to force re-fetch
+            window.githubDataManager.invalidateCacheFor(this.projectId);
+            const project = await window.githubDataManager.ensureDetails(this.projectId);
+            this.currentProject = project;
+            this.renderProjectData(project);
         } else {
             this.loadProjectData();
         }
