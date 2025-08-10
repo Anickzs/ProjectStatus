@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.js'],
     include: ['tests/**/*.spec.js'],
+    exclude: ['tests/**/*.spec.ts', 'tests/e2e-*.spec.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [
