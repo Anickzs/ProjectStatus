@@ -838,10 +838,20 @@ class ProjectDetailManager {
                 elOverview?.closest('.detail-section')?.classList.add('hidden');
             }
             
-            // Status - hide if unknown
+            // Status - extract from overview if normalized status is unknown
             const elStatus = document.getElementById('project-status');
-            if (normalizedFields.status && normalizedFields.status !== 'Unknown') {
-                this.domUtils.safeUpdateElement('project-status', 'textContent', normalizedFields.status);
+            let statusText = normalizedFields.status;
+            
+            if (!statusText || statusText === 'Unknown') {
+                // Try to extract status from overview text
+                const statusMatch = projectDescription.match(/\*\*Status:\*\*\s*([^\n]+)/i);
+                if (statusMatch) {
+                    statusText = statusMatch[1].trim();
+                }
+            }
+            
+            if (statusText && statusText !== 'Unknown') {
+                this.domUtils.safeUpdateElement('project-status', 'textContent', statusText);
             } else {
                 elStatus?.parentElement?.classList.add('hidden');
             }

@@ -164,6 +164,24 @@ Each project section should include:
 - Check if port 8000 is already in use
 - Try a different port: `python3 server.py 8001`
 
+### Recent Fixes (✅ Resolved)
+
+**Project Overview Display Issues**
+- ✅ Fixed raw markdown display in project overview
+- ✅ Added proper HTML formatting for bold text, checkmarks, and line breaks
+- ✅ Status now displays correctly from GitHub data
+
+**GitHub Data Parsing Issues**
+- ✅ Enhanced markdown parser to handle GitHub's emoji and bold format
+- ✅ Fixed status extraction from overview sections
+- ✅ Improved progress bar display (80% showing correctly)
+- ✅ Technical stack now displays properly
+
+**SES Deprecation Warnings**
+- These are from a third-party security library
+- Harmless warnings that don't affect functionality
+- Can be safely ignored
+
 ### Performance Tips
 - Use the custom server (`server.py`) for better error handling
 - Check `server.log` for detailed request logs
