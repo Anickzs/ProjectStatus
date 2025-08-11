@@ -92,6 +92,33 @@ The project uses a modular JavaScript architecture with separate Python tools fo
 - All project data comes from GitHub repositories containing `ProjectDetails.md` files
 - Session-based caching for improved performance
 
+### Testing
+
+The project includes comprehensive end-to-end tests using Playwright:
+
+```bash
+# Run all e2e tests
+cd e2e-tests
+./run-project-detail-tests.sh
+
+# Run specific test suites
+./run-project-detail-tests.sh --features    # Project detail features
+./run-project-detail-tests.sh --data        # Data population validation
+./run-project-detail-tests.sh --cards       # Basic project card functionality
+```
+
+**Test Coverage:**
+- ✅ Project detail page functionality
+- ✅ Task management and categorization
+- ✅ Project timeline and activity log
+- ✅ File management and uploads
+- ✅ Navigation and mobile responsiveness
+- ✅ Keyboard shortcuts and accessibility
+- ✅ Data population from GitHub
+- ✅ Error handling and edge cases
+
+See `e2e-tests/README.md` for detailed testing documentation.
+
 ## 📊 Data Files
 
 Analysis results and project data are stored in the `data/` directory as JSON files for easy access and processing.

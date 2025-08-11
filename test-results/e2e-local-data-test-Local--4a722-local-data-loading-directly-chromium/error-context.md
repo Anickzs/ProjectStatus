@@ -1,0 +1,104 @@
+# Page snapshot
+
+```yaml
+- complementary:
+  - text: 
+  - heading "Project In Progress" [level=2]
+  - paragraph: Dashboard
+  - navigation:
+    - list:
+      - listitem:
+        - link " Dashboard":
+          - /url: "#"
+      - listitem:
+        - link " Projects":
+          - /url: "#"
+      - listitem:
+        - link " Tasks":
+          - /url: "#"
+      - listitem:
+        - link " Analytics":
+          - /url: "#"
+      - listitem:
+        - link " Settings":
+          - /url: "#"
+- banner:
+  - text: 
+  - heading "Project In Progress" [level=1]
+  - text:  4 Active Projects  Updated Today
+  - button "Toggle mobile menu": 
+- main:
+  - text: 
+  - heading "BusinessLocalAI Project Details" [level=3]
+  - text: Web Application   Unknown
+  - button ""
+  - paragraph: Project overview not available
+  - text: " Phase 0: Planning & Research  Last updated: 8/10/2025 0% Complete "
+  - heading "Completed (0)" [level=4]
+  - list
+  - text: 
+  - heading "Next Steps (0)" [level=4]
+  - list
+  - text: 
+  - heading "Tech Stack" [level=4]
+  - text: "Framework: FastAPI (Python) Database: SQLite (development), PostgreSQL (production) Cache: Redis AI Models: Ollama with local model support Authentication: JWT tokens with API key management Framework: React with TypeScript +9 "
+  - heading "Key Features" [level=4]
+  - list:
+    - listitem: "★ Text Generation: High-quality content creation and summarization"
+    - listitem: "★ Document Analysis: Intelligent extraction and classification"
+    - listitem: "★ Conversational AI: Context-aware chat with memory"
+    - listitem: "★ Custom Training: Domain-specific model adaptation"
+    - listitem: ... ... and 8 more
+  - button " View Full Details"
+  - button " Show More"
+  - text: 
+  - heading "📊 AT HOME DIY - PROJECT STATISTICS & STATUS" [level=3]
+  - text: DIY App   Unknown
+  - button ""
+  - paragraph: Project overview not available
+  - text: " Phase 0: Planning & Research  Last updated: 8/10/2025 0% Complete "
+  - heading "Completed (0)" [level=4]
+  - list
+  - text: 
+  - heading "Next Steps (0)" [level=4]
+  - list
+  - button " View Full Details"
+  - button " Show More"
+  - text: 
+  - heading "BusinessLocalAI Project Details" [level=3]
+  - text: Web Application   Unknown
+  - button ""
+  - paragraph: Project overview not available
+  - text: " Phase 0: Planning & Research  Last updated: 8/10/2025 0% Complete "
+  - heading "Completed (0)" [level=4]
+  - list
+  - text: 
+  - heading "Next Steps (0)" [level=4]
+  - list
+  - text: 
+  - heading "Tech Stack" [level=4]
+  - text: "Framework: FastAPI (Python) Database: SQLite (development), PostgreSQL (production) Cache: Redis AI Models: Ollama with local model support Authentication: JWT tokens with API key management Framework: React with TypeScript +9 "
+  - heading "Key Features" [level=4]
+  - list:
+    - listitem: "★ Text Generation: High-quality content creation and summarization"
+    - listitem: "★ Document Analysis: Intelligent extraction and classification"
+    - listitem: "★ Conversational AI: Context-aware chat with memory"
+    - listitem: "★ Custom Training: Domain-specific model adaptation"
+    - listitem: ... ... and 8 more
+  - button " View Full Details"
+  - button " Show More"
+  - text: 
+  - heading "📊 AT HOME DIY - PROJECT STATISTICS & STATUS" [level=3]
+  - text: DIY App   Unknown
+  - button ""
+  - paragraph: Project overview not available
+  - text: " Phase 0: Planning & Research  Last updated: 8/10/2025 0% Complete "
+  - heading "Completed (0)" [level=4]
+  - list
+  - text: 
+  - heading "Next Steps (0)" [level=4]
+  - list
+  - button " View Full Details"
+  - button " Show More"
+- text:  Project data loaded from GitHub
+```

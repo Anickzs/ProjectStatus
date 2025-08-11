@@ -210,7 +210,7 @@ body {
 
 /* Mobile Menu Toggle */
 .mobile-menu-toggle {
-    display: none;
+    display: block;
     background: none;
     border: none;
     color: #64748b;
@@ -219,6 +219,10 @@ body {
     padding: 8px;
     border-radius: 6px;
     transition: all 0.2s ease;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
 }
 
 .mobile-menu-toggle:hover {
@@ -2844,4 +2848,169 @@ body {
 /* Utility classes */
 .hidden {
     display: none !important;
+}
+
+/* Enhanced Project Card Styles */
+.tech-stack {
+    margin-top: 16px;
+}
+
+.tech-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.tech-tag {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    transition: all 0.2s ease;
+}
+
+.tech-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.tech-tag.more {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    cursor: pointer;
+}
+
+.tech-tag.more:hover {
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+}
+
+.key-features {
+    margin-top: 16px;
+}
+
+.key-features ul {
+    margin-top: 8px;
+}
+
+.key-features li {
+    color: #374151;
+    font-weight: 500;
+    padding: 4px 0;
+}
+
+.key-features li:before {
+    content: "★";
+    color: #f59e0b;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.more-features {
+    color: #6b7280 !important;
+    font-style: italic;
+    font-weight: normal !important;
+}
+
+.more-features:before {
+    content: "..." !important;
+    color: #9ca3af !important;
+}
+
+.project-footer {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.view-details-btn, .expand-card-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.view-details-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.view-details-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.expand-card-btn {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.expand-card-btn:hover {
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    transform: translateY(-1px);
+}
+
+.expand-card-btn i {
+    transition: transform 0.2s ease;
+}
+
+.expand-card-btn.expanded i {
+    transform: rotate(180deg);
+}
+
+/* Expanded card styles */
+.project-card.expanded {
+    max-height: none;
+    overflow: visible;
+}
+
+.project-card.expanded .project-content {
+    max-height: none;
+}
+
+.project-card.expanded .more-features {
+    display: none;
+}
+
+.project-card.expanded .content-section ul li {
+    display: block;
+}
+
+.project-card.expanded .tech-tags .tech-tag.more {
+    display: none;
+}
+
+.project-card.expanded .tech-tags .tech-tag {
+    display: inline-block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .project-footer {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .tech-tags {
+        gap: 6px;
+    }
+    
+    .tech-tag {
+        font-size: 11px;
+        padding: 3px 10px;
+    }
 }

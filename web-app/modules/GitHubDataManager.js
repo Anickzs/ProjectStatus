@@ -35,7 +35,7 @@ class GitHubDataManager {
         });
         this._projectRepo.set('businesslocalai-project-details', {
             owner: 'Anickzs',
-            repo: 'BusinessLocalAI',
+            repo: 'BusinessLoclAi',
             basePath: '' // file is at repo root
         });
     }
@@ -266,7 +266,8 @@ class GitHubDataManager {
             completed_features: projectData.features.completed,
             in_progress_features: projectData.features.inProgress,
             todo_features: projectData.features.pending,
-            tech_stack: projectData.technical,
+            technical_stack: projectData.technical, // Changed from tech_stack to technical_stack
+            key_features: projectData.keyFeatures, // Added key_features field
             last_updated: new Date().toISOString(),
             metrics: {},
             roadmap: [],
@@ -281,28 +282,147 @@ class GitHubDataManager {
     async loadAllProjectData() {
         console.log(`Loading data for ${this.repositories.length} repositories...`);
         
-        const loadPromises = this.repositories.map(async (repo) => {
-            try {
-                console.log(`Loading data for repository: ${repo.name}`);
-                const projectData = await this.loadProjectData(repo);
-                if (projectData) {
-                    // Store by normalized ID in session data (new format)
-                    this.sessionData.set(projectData.id, projectData);
-                    
-                    // Store by both normalized ID and repository name in cache for backward compatibility
-                    const legacyData = this.convertToLegacyFormat(projectData);
-                    this.dataCache.set(projectData.id, legacyData);
-                    this.dataCache.set(repo.name, legacyData);
-                    
-                    console.log(`Successfully loaded data for ${repo.name} -> ${projectData.id}`);
+        // First, try to load from local data file
+        await this.loadLocalProjectData();
+        
+        // If no local data loaded, try GitHub repositories
+        if (this.sessionData.size === 0) {
+            console.log('No local data found, trying GitHub repositories...');
+            
+            const loadPromises = this.repositories.map(async (repo) => {
+                try {
+                    console.log(`Loading data for repository: ${repo.name}`);
+                    const projectData = await this.loadProjectData(repo);
+                    if (projectData) {
+                        // Store by normalized ID in session data (new format)
+                        this.sessionData.set(projectData.id, projectData);
+                        
+                        // Store by both normalized ID and repository name in cache for backward compatibility
+                        const legacyData = this.convertToLegacyFormat(projectData);
+                        this.dataCache.set(projectData.id, legacyData);
+                        this.dataCache.set(repo.name, legacyData);
+                        
+                        console.log(`Successfully loaded data for ${repo.name} -> ${projectData.id}`);
+                    }
+                } catch (error) {
+                    console.warn(`Failed to load data for repository ${repo.name}:`, error);
                 }
-            } catch (error) {
-                console.warn(`Failed to load data for repository ${repo.name}:`, error);
-            }
-        });
+            });
 
-        await Promise.all(loadPromises);
+            await Promise.all(loadPromises);
+        }
+        
         console.log(`Loaded data for ${this.sessionData.size} projects`);
+    }
+
+    async loadLocalProjectData() {
+        try {
+            console.log('Attempting to load local PROJECTS.md file...');
+            
+            // Load the local PROJECTS.md file
+            const response = await fetch('/data/PROJECTS.md');
+            if (!response.ok) {
+                console.warn('Local PROJECTS.md not found, will try GitHub');
+                return;
+            }
+            
+            const content = await response.text();
+            console.log(`Loaded local PROJECTS.md file (${content.length} characters)`);
+            
+            // Parse the markdown content to extract individual projects
+            const projects = this.parseLocalProjectsFile(content);
+            
+            // Add each project to session data and cache
+            for (const project of projects) {
+                if (project.id && project.title) {
+                    this.sessionData.set(project.id, project);
+                    
+                    // Also store in cache for backward compatibility
+                    const legacyData = this.convertToLegacyFormat(project);
+                    this.dataCache.set(project.id, legacyData);
+                    
+                    console.log(`Added local project: ${project.title} (ID: ${project.id})`);
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error loading local project data:', error);
+        }
+    }
+
+    parseLocalProjectsFile(content) {
+        const projects = [];
+        
+        console.log('=== PARSING LOCAL PROJECTS FILE ===');
+        console.log('Content length:', content.length);
+        
+        // Split content by ## headings to find individual projects
+        const projectSections = content.split(/(?=^##\s+)/m);
+        console.log('Found project sections:', projectSections.length);
+        
+        for (let i = 0; i < projectSections.length; i++) {
+            const section = projectSections[i];
+            console.log(`\n--- Processing section ${i + 1} ---`);
+            console.log('Section starts with ##:', section.trim().startsWith('##'));
+            console.log('Section length:', section.length);
+            console.log('Section preview:', section.substring(0, 200));
+            
+            if (section.trim() && section.startsWith('##')) {
+                try {
+                    // Extract project name from ## heading
+                    const titleMatch = section.match(/^##\s+(.+)$/m);
+                    if (titleMatch) {
+                        const projectTitle = titleMatch[1].trim();
+                        const projectId = this.slugify(projectTitle);
+                        
+                        console.log('Extracted title:', projectTitle);
+                        console.log('Generated ID:', projectId);
+                        
+                        // Parse this project section
+                        const sections = this.splitByHeadings(section);
+                        console.log('Parsed sections:', Object.keys(sections));
+                        
+                        const project = {
+                            id: projectId,
+                            title: projectTitle,
+                            name: projectTitle,
+                            overview: this.extractOverview(sections),
+                            status: this.extractStatus(sections),
+                            features: {
+                                completed: this.extractCompletedFeatures(sections),
+                                inProgress: this.extractInProgressFeatures(sections),
+                                pending: this.extractPendingTasks(sections)
+                            },
+                            technical: this.extractTechnicalStack(sections),
+                            keyFeatures: this.extractKeyFeatures(sections),
+                            aliases: [projectTitle]
+                        };
+                        
+                        console.log('Project overview:', project.overview?.substring(0, 100));
+                        console.log('Project status:', project.status);
+                        console.log('Completed features count:', project.features.completed.length);
+                        console.log('In progress features count:', project.features.inProgress.length);
+                        console.log('Pending features count:', project.features.pending.length);
+                        console.log('Technical stack count:', project.technical.length);
+                        console.log('Key features count:', project.keyFeatures.length);
+                        
+                        projects.push(project);
+                        console.log(`✅ Successfully parsed local project: ${projectTitle}`);
+                    } else {
+                        console.log('❌ No title match found in section');
+                    }
+                } catch (error) {
+                    console.error('❌ Error parsing project section:', error);
+                }
+            } else {
+                console.log('❌ Section does not start with ## or is empty');
+            }
+        }
+        
+        console.log(`\n=== PARSING COMPLETE ===`);
+        console.log(`Total projects parsed: ${projects.length}`);
+        
+        return projects;
     }
 
     async loadProjectData(repo) {
@@ -483,23 +603,36 @@ class GitHubDataManager {
 
         // Extract phase from status section
         if (statusSection) {
-            const phaseMatch = statusSection.match(/(\w+)/i);
-            if (phaseMatch) {
-                const statusText = phaseMatch[1].toLowerCase();
-                if (statusText.includes('complete') || statusText.includes('ready')) {
-                    phase = 'Completed';
-                } else if (statusText.includes('progress') || statusText.includes('development')) {
-                    phase = 'In Progress';
-                } else if (statusText.includes('planning')) {
-                    phase = 'Planning';
-                } else {
+            // Handle emoji and bold formatting in status
+            const cleanStatus = statusSection.replace(/[✅🟡🔴]/g, '').replace(/\*\*/g, '');
+            
+            // Look for common status patterns
+            if (cleanStatus.toLowerCase().includes('complete') || cleanStatus.toLowerCase().includes('ready')) {
+                phase = 'Production Ready';
+            } else if (cleanStatus.toLowerCase().includes('progress') || cleanStatus.toLowerCase().includes('development')) {
+                phase = 'In Progress';
+            } else if (cleanStatus.toLowerCase().includes('planning')) {
+                phase = 'Planning';
+            } else {
+                // Extract first meaningful word as phase
+                const phaseMatch = cleanStatus.match(/(\w+)/i);
+                if (phaseMatch) {
                     phase = phaseMatch[1];
                 }
             }
         }
 
-        // Extract progress percentage
-        const progressMatch = statusSection.match(/(\d+)%/i);
+        // Extract progress percentage - handle various formats
+        let progressMatch = statusSection.match(/(\d+)%/i);
+        if (!progressMatch) {
+            // Try alternative patterns like "80% Complete"
+            progressMatch = statusSection.match(/(\d+)%\s*complete/i);
+        }
+        if (!progressMatch) {
+            // Try "X% Complete - Production Ready" format
+            progressMatch = statusSection.match(/(\d+)%\s*complete\s*-\s*production\s*ready/i);
+        }
+        
         if (progressMatch) {
             progress = parseInt(progressMatch[1]);
         } else {
@@ -587,15 +720,61 @@ class GitHubDataManager {
         const lines = sectionContent.split('\n');
         
         for (const line of lines) {
-            // Match bullet points, checkboxes, or any line with content
-            const cleanLine = line
-                .replace(/^[-*•]\s*/, '') // Remove bullet points
-                .replace(/^\[[x ]\]\s*/, '') // Remove checkboxes
-                .replace(/\*\*/g, '') // Remove bold formatting
-                .trim();
+            const trimmed = line.trim();
             
-            if (cleanLine && cleanLine.length > 3 && !cleanLine.startsWith('#')) {
-                features.push(cleanLine);
+            // Handle checkbox format: - [x] Feature description
+            if (trimmed.startsWith('- [x]') || trimmed.startsWith('- [ ]')) {
+                const featureText = trimmed.replace(/^- \[[x ]\]\s*/, '').trim();
+                if (featureText) {
+                    // Clean up markdown formatting
+                    const cleanFeature = featureText
+                        .replace(/\*\*/g, '') // Remove bold
+                        .replace(/`/g, '') // Remove code formatting
+                        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Convert links to text
+                    features.push(cleanFeature);
+                }
+            } 
+            // Handle numbered lists: 1. Feature description
+            else if (/^\d+\.\s/.test(trimmed)) {
+                const featureText = trimmed.replace(/^\d+\.\s*/, '').trim();
+                if (featureText) {
+                    const cleanFeature = featureText
+                        .replace(/\*\*/g, '')
+                        .replace(/`/g, '')
+                        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+                    features.push(cleanFeature);
+                }
+            }
+            // Handle regular list items: - Feature description
+            else if (trimmed.startsWith('- ') && !trimmed.startsWith('- [x]') && !trimmed.startsWith('- [ ]')) {
+                const featureText = trimmed.replace(/^-\s*/, '').trim();
+                if (featureText) {
+                    const cleanFeature = featureText
+                        .replace(/\*\*/g, '')
+                        .replace(/`/g, '')
+                        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+                    features.push(cleanFeature);
+                }
+            }
+            // Handle bold headers that might be features: **Feature Name**
+            else if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+                const featureText = trimmed.replace(/\*\*/g, '').trim();
+                if (featureText && !featureText.includes(':') && featureText.length > 3) {
+                    features.push(featureText);
+                }
+            }
+            // Fallback: any line with content (original logic)
+            else if (trimmed && trimmed.length > 3 && !trimmed.startsWith('#')) {
+                const cleanFeature = trimmed
+                    .replace(/^[-*•]\s*/, '') // Remove bullet points
+                    .replace(/^\[[x ]\]\s*/, '') // Remove checkboxes
+                    .replace(/\*\*/g, '') // Remove bold formatting
+                    .replace(/`/g, '') // Remove code formatting
+                    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Convert links to text
+                
+                if (cleanFeature && cleanFeature.length > 3) {
+                    features.push(cleanFeature);
+                }
             }
         }
 
@@ -939,17 +1118,31 @@ class GitHubDataManager {
             return [];
         }
         
-        // Return projects with normalized {id, title, ...} structure
-        return Array.from(this.dataCache.values()).map(project => {
-            // Ensure each project has id and title fields
-            if (!project.id && project.name) {
-                project.id = this.slugify(project.name);
+        const projects = [];
+        
+        // Convert session data (new format) to legacy format
+        for (const [id, projectData] of this.sessionData) {
+            const legacyData = this.convertToLegacyFormat(projectData);
+            projects.push(legacyData);
+        }
+        
+        // Also include any cached data (for backward compatibility)
+        for (const [id, projectData] of this.dataCache) {
+            // Skip if we already have this project from session data
+            if (!projects.find(p => p.id === id)) {
+                // Ensure each project has id and title fields
+                if (!projectData.id && projectData.name) {
+                    projectData.id = this.slugify(projectData.name);
+                }
+                if (!projectData.title && projectData.name) {
+                    projectData.title = projectData.name;
+                }
+                projects.push(projectData);
             }
-            if (!project.title && project.name) {
-                project.title = project.name;
-            }
-            return project;
-        });
+        }
+        
+        console.log(`getAllProjects: returning ${projects.length} projects`);
+        return projects;
     }
 
     /**

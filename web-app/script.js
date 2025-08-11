@@ -147,24 +147,61 @@ function createProjectCard(project, index) {
             <div class="content-section completed">
                 <div class="section-header">
                     <i class="fas fa-check-circle"></i>
-                    <h4>Completed</h4>
+                    <h4>Completed (${project.completed_features.length})</h4>
                 </div>
                 <ul>
-                    ${project.completed_features.slice(0, 3).map(feature => `<li>${feature}</li>`).join('')}
-                    ${project.completed_features.length > 3 ? `<li>... and ${project.completed_features.length - 3} more</li>` : ''}
+                    ${project.completed_features.slice(0, 5).map(feature => `<li>${feature}</li>`).join('')}
+                    ${project.completed_features.length > 5 ? `<li class="more-features">... and ${project.completed_features.length - 5} more</li>` : ''}
                 </ul>
             </div>
             
             <div class="content-section next-steps">
                 <div class="section-header">
                     <i class="fas fa-file-alt"></i>
-                    <h4>Next Steps</h4>
+                    <h4>Next Steps (${project.todo_features.length})</h4>
                 </div>
                 <ul>
-                    ${project.todo_features.slice(0, 3).map(feature => `<li>${feature}</li>`).join('')}
-                    ${project.todo_features.length > 3 ? `<li>... and ${project.todo_features.length - 3} more</li>` : ''}
+                    ${project.todo_features.slice(0, 5).map(feature => `<li>${feature}</li>`).join('')}
+                    ${project.todo_features.length > 5 ? `<li class="more-features">... and ${project.todo_features.length - 5} more</li>` : ''}
                 </ul>
             </div>
+            
+            ${project.technical_stack && project.technical_stack.length > 0 ? `
+            <div class="content-section tech-stack">
+                <div class="section-header">
+                    <i class="fas fa-code"></i>
+                    <h4>Tech Stack</h4>
+                </div>
+                <div class="tech-tags">
+                    ${project.technical_stack.slice(0, 6).map(tech => `<span class="tech-tag">${tech}</span>`).join('')}
+                    ${project.technical_stack.length > 6 ? `<span class="tech-tag more">+${project.technical_stack.length - 6}</span>` : ''}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${project.key_features && project.key_features.length > 0 ? `
+            <div class="content-section key-features">
+                <div class="section-header">
+                    <i class="fas fa-star"></i>
+                    <h4>Key Features</h4>
+                </div>
+                <ul>
+                    ${project.key_features.slice(0, 4).map(feature => `<li>${feature}</li>`).join('')}
+                    ${project.key_features.length > 4 ? `<li class="more-features">... and ${project.key_features.length - 4} more</li>` : ''}
+                </ul>
+            </div>
+            ` : ''}
+        </div>
+        
+        <div class="project-footer">
+            <button class="view-details-btn" onclick="navigateToProjectDetail('${project.name}')">
+                <i class="fas fa-eye"></i>
+                View Full Details
+            </button>
+            <button class="expand-card-btn" onclick="toggleCardExpansion(this)">
+                <i class="fas fa-expand-alt"></i>
+                Show More
+            </button>
         </div>
     `;
     
@@ -655,6 +692,32 @@ function navigateToProjectDetail(projectName) {
     const projectId = getProjectIdFromName(projectName);
     window.location.href = `project-detail.html?id=${projectId}`;
 }
+
+function toggleCardExpansion(button) {
+    const card = button.closest('.project-card');
+    const isExpanded = card.classList.contains('expanded');
+    
+    if (isExpanded) {
+        card.classList.remove('expanded');
+        button.innerHTML = '<i class="fas fa-expand-alt"></i> Show More';
+        button.classList.remove('expanded');
+    } else {
+        card.classList.add('expanded');
+        button.innerHTML = '<i class="fas fa-compress-alt"></i> Show Less';
+        button.classList.add('expanded');
+    }
+    
+    // Smooth scroll to show the expanded content
+    if (!isExpanded) {
+        setTimeout(() => {
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+    }
+}
+
+// Global functions for HTML onclick handlers
+window.toggleCardExpansion = toggleCardExpansion;
+window.navigateToProjectDetail = navigateToProjectDetail;
 
 function getProjectIdFromName(projectName) {
     // Use GitHub data manager only

@@ -1,235 +1,261 @@
-# End-to-End Testing Suite
+# Project Detail E2E Tests
 
-This directory contains comprehensive end-to-end tests for the ProjectStatus web application using Playwright.
+This directory contains comprehensive end-to-end tests for the ProjectStatus application, specifically focusing on project detail page functionality and data population.
 
-## Test Overview
+## 🧪 Test Suites
 
-The e2e test suite consists of **14 tests** across **2 test files** that validate the complete user experience from dashboard to project details.
+### 1. Project Detail Features (`e2e-project-detail-features.spec.ts`)
+Tests all interactive features of the project detail page:
 
-### Test Files
+- **Navigation & Structure**: Verifies proper navigation from dashboard to detail pages
+- **Task Management**: Tests task categories, collapsible sections, and add task functionality
+- **Project Timeline**: Validates timeline events display and structure
+- **Recent Activity**: Tests activity log functionality and toggle features
+- **Project Actions**: Tests all action buttons (refresh, edit, delete, export, share)
+- **File Management**: Tests file upload modal and file display
+- **Breadcrumb Navigation**: Verifies proper navigation back to dashboard
+- **Mobile Menu**: Tests mobile responsiveness and sidebar functionality
+- **Keyboard Shortcuts**: Tests keyboard navigation (Ctrl+E, Ctrl+T, Ctrl+U, Escape)
 
-1. **`e2e-project-cards.spec.ts`** - Core project card functionality and navigation
-2. **`e2e-ui-interactions.spec.ts`** - UI interactions, edge cases, and accessibility
+### 2. Data Population & Validation (`e2e-data-population.spec.ts`)
+Focuses on verifying that all data is correctly populated from GitHub:
 
-## Test Coverage
+- **Project Overview**: Tests title, description, and metadata display
+- **Task Sections**: Validates tasks are properly categorized and displayed
+- **Timeline Events**: Ensures timeline shows meaningful project events
+- **Activity Log**: Verifies recent activities are properly displayed
+- **Project Metadata**: Tests status, phase, progress, and last updated fields
+- **Files Section**: Validates file management structure
 
-### Core Functionality (7 tests)
+### 3. Project Cards Basic (`e2e-project-cards.spec.ts`)
+Tests basic project card functionality:
 
-1. **Dashboard cards are clickable and navigate to detail page**
-   - Validates that project cards are interactive
-   - Ensures proper navigation to detail pages
-   - Tests URL parameter handling
+- **Card Navigation**: Verifies cards are clickable and navigate properly
+- **Data Rendering**: Tests that detail pages show real data instead of placeholders
+- **Loading States**: Validates proper loading and error handling
+- **Accessibility**: Tests basic accessibility features
+- **Error Handling**: Tests graceful handling of invalid project IDs
 
-2. **Each clicked card renders real details (or hides placeholders)**
-   - Verifies meaningful content is displayed
-   - Tests progress bar accuracy
-   - Validates feature and technical lists
-   - Ensures no placeholder content is shown when data is available
-
-3. **Dashboard shows loading state and then populated cards**
-   - Tests loading state visibility
-   - Validates transition from loading to populated state
-   - Ensures proper card structure
-
-4. **Project detail page handles invalid project IDs gracefully**
-   - Tests error handling for invalid URLs
-   - Ensures graceful degradation
-
-5. **Project cards have proper accessibility attributes**
-   - Validates interactive behavior
-   - Tests keyboard navigation support
-
-6. **Project detail page action buttons are functional**
-   - Tests refresh functionality
-   - Validates edit button behavior
-   - Ensures proper event handling
-
-7. **Navigation breadcrumbs work correctly**
-   - Tests breadcrumb navigation
-   - Validates context preservation
-   - Ensures proper return to dashboard
-
-### UI Interactions & Edge Cases (7 tests)
-
-8. **Mobile menu toggle works correctly**
-   - Tests responsive design
-   - Validates mobile menu functionality
-   - Tests viewport-specific behavior
-
-9. **Keyboard shortcuts work on project detail page**
-   - Tests Ctrl+R refresh shortcut
-   - Validates Ctrl+E edit shortcut
-   - Ensures keyboard accessibility
-
-10. **Project cards show proper hover effects**
-    - Tests CSS hover animations
-    - Validates visual feedback
-    - Ensures smooth transitions
-
-11. **Project detail page handles network errors gracefully**
-    - Tests error handling for network failures
-    - Validates graceful degradation
-    - Ensures application remains functional
-
-12. **Project cards have consistent styling across different projects**
-    - Tests visual consistency
-    - Validates layout uniformity
-    - Ensures proper dimensions
-
-13. **Breadcrumb navigation preserves project context**
-    - Tests context preservation
-    - Validates navigation flow
-    - Ensures proper state management
-
-14. **Project detail page sections are collapsible**
-    - Tests interactive sections
-    - Validates animation behavior
-    - Ensures proper state changes
-
-## Running the Tests
+## 🚀 Running the Tests
 
 ### Prerequisites
 
-- Node.js and npm installed
-- Python 3 for the web server
-- Playwright browsers installed
+1. **Start the development server**:
+   ```bash
+   # Option 1: Use the start script
+   ./start-server.sh
+   
+   # Option 2: Manual server start
+   cd web-app && python3 server.py 8000
+   ```
 
-### Installation
+2. **Install Playwright** (if not already installed):
+   ```bash
+   npm install -D @playwright/test
+   npx playwright install
+   ```
+
+### Running All Tests
 
 ```bash
-# Install dependencies
-npm install
-
-# Install Playwright browsers
-npx playwright install
+cd e2e-tests
+./run-project-detail-tests.sh
 ```
 
-### Running Tests
+### Running Specific Test Suites
 
 ```bash
-# Run all tests
-npx playwright test
+# Run only feature tests
+./run-project-detail-tests.sh --features
 
-# Run tests with browser visible
-npx playwright test --headed
+# Run only data population tests
+./run-project-detail-tests.sh --data
 
+# Run only project cards tests
+./run-project-detail-tests.sh --cards
+
+# Run all tests (default)
+./run-project-detail-tests.sh --all
+```
+
+### Manual Test Execution
+
+```bash
 # Run specific test file
-npx playwright test e2e-project-cards.spec.ts
+npx playwright test e2e-project-detail-features.spec.ts
 
-# Run tests in specific browser
+# Run with specific browser
 npx playwright test --project=chromium
 
-# Run tests with debug mode
+# Run with headed mode (see browser)
+npx playwright test --headed
+
+# Run with debug mode
 npx playwright test --debug
 ```
 
-### Test Configuration
-
-The tests are configured in `playwright.config.ts`:
-
-- **Base URL**: `http://localhost:8000`
-- **Web Server**: Python HTTP server on port 8000
-- **Browser**: Chromium
-- **Retries**: 1 retry on failure
-- **Timeout**: 30 seconds per test
-- **Parallel**: Tests run in parallel for efficiency
+## ⚙️ Configuration
 
 ### Environment Variables
 
-- `TEST_MAX_CARDS`: Maximum number of project cards to test (default: 2)
-- `PLAYWRIGHT_HEADLESS`: Set to false to run with browser visible
+- `TEST_MAX_CARDS`: Number of project cards to test (default: 2)
+- `NODE_ENV`: Test environment (default: test)
 
-## Test Data
+### Playwright Configuration
 
-The tests use live data from GitHub repositories defined in the application. The test suite:
+The tests use the configuration in `playwright.config.ts`:
+- Base URL: `http://localhost:8000`
+- Browser: Chromium
+- Timeout: 30 seconds for web server startup
+- Retries: 1 on failure
 
-- Loads real project data from GitHub
-- Tests with actual project content
-- Validates data parsing and rendering
-- Ensures meaningful content display
+## 📊 Test Coverage
 
-## Test Results
+### Project Detail Page Features Tested
 
-### Success Criteria
+| Feature | Test Coverage | Status |
+|---------|---------------|--------|
+| Project Overview | ✅ Complete | All sections validated |
+| Task Management | ✅ Complete | Categories, collapsible, add task |
+| Project Timeline | ✅ Complete | Events, structure, content |
+| Recent Activity | ✅ Complete | Log display, toggle functionality |
+| Project Actions | ✅ Complete | All buttons functional |
+| File Management | ✅ Complete | Upload modal, file display |
+| Navigation | ✅ Complete | Breadcrumbs, mobile menu |
+| Keyboard Shortcuts | ✅ Complete | All shortcuts tested |
+| Data Population | ✅ Complete | GitHub data validation |
+| Error Handling | ✅ Complete | Invalid IDs, loading states |
 
-All tests should pass with:
-- ✅ **14/14 tests passing**
-- ✅ **No flaky tests**
-- ✅ **Consistent behavior across runs**
-- ✅ **Proper error handling**
-- ✅ **Accessibility compliance**
+### Data Validation
 
-### Debugging Failed Tests
+| Data Type | Validation | Status |
+|-----------|------------|--------|
+| Project Title | Meaningful content, no loading states | ✅ |
+| Project Description | Proper formatting, meaningful content | ✅ |
+| Project Status | Valid status values | ✅ |
+| Project Phase | Valid phase information | ✅ |
+| Progress Bar | Consistent width and text values | ✅ |
+| Task Lists | Proper categorization, meaningful content | ✅ |
+| Timeline Events | Valid events with dates and descriptions | ✅ |
+| Activity Log | Meaningful activities with timestamps | ✅ |
+| File Structure | Proper file display and actions | ✅ |
 
-1. **View test traces**:
-   ```bash
-   npx playwright show-trace test-results/[test-name]/trace.zip
-   ```
-
-2. **Run in debug mode**:
-   ```bash
-   npx playwright test --debug
-   ```
-
-3. **Check error context**:
-   - Review `test-results/[test-name]/error-context.md`
-   - Examine page snapshots and console logs
-
-## Continuous Integration
-
-The test suite is designed for CI/CD integration:
-
-- **Fast execution** (~20 seconds for full suite)
-- **Reliable results** with proper retry logic
-- **Parallel execution** for efficiency
-- **Comprehensive coverage** of user workflows
-
-## Maintenance
-
-### Adding New Tests
-
-1. Create test in appropriate spec file
-2. Follow existing patterns and naming conventions
-3. Include proper error handling and timeouts
-4. Test both success and failure scenarios
-
-### Updating Tests
-
-When the application changes:
-
-1. Update selectors if DOM structure changes
-2. Adjust timeouts for slower operations
-3. Update expected content for new features
-4. Maintain backward compatibility where possible
-
-### Best Practices
-
-- Use descriptive test names
-- Include proper assertions
-- Handle async operations correctly
-- Test edge cases and error scenarios
-- Maintain test independence
-- Use appropriate wait strategies
-
-## Performance
-
-- **Total execution time**: ~20 seconds
-- **Parallel workers**: 4
-- **Memory usage**: Optimized for CI environments
-- **Network efficiency**: Minimal external requests
-
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-1. **Server not starting**: Ensure Python 3 is available
-2. **Tests timing out**: Check network connectivity to GitHub
-3. **Selector failures**: Verify DOM structure hasn't changed
-4. **Flaky tests**: Increase timeouts or add retry logic
+1. **Server Not Running**
+   ```
+   Error: connect ECONNREFUSED 127.0.0.1:8000
+   ```
+   **Solution**: Start the development server first using `./start-server.sh`
 
-### Getting Help
+2. **Tests Timeout**
+   ```
+   Error: Timeout 15000ms exceeded
+   ```
+   **Solution**: Increase timeout in test or check server performance
 
-- Check test logs for detailed error information
-- Review browser console for JavaScript errors
-- Examine network requests for API issues
-- Use Playwright's debugging tools for step-by-step analysis
+3. **No Project Cards Found**
+   ```
+   Error: Expected 0 to be greater than 0
+   ```
+   **Solution**: Ensure GitHub data is available and server is serving content
+
+4. **Playwright Not Installed**
+   ```
+   Error: command not found: playwright
+   ```
+   **Solution**: Run `npm install -D @playwright/test && npx playwright install`
+
+### Debug Mode
+
+Run tests in debug mode to step through them:
+```bash
+npx playwright test --debug
+```
+
+### View Test Reports
+
+After running tests, view detailed reports:
+```bash
+npx playwright show-report
+```
+
+## 📝 Test Development
+
+### Adding New Tests
+
+1. Create a new test file: `e2e-new-feature.spec.ts`
+2. Follow the existing test structure
+3. Use helper functions for common operations
+4. Add proper error handling and timeouts
+
+### Test Structure
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('Feature Name', () => {
+  test.beforeEach(async ({ page }) => {
+    // Setup code
+  });
+
+  test('should do something', async ({ page }) => {
+    // Test implementation
+  });
+});
+```
+
+### Best Practices
+
+1. **Use meaningful test names** that describe the expected behavior
+2. **Wait for elements** before interacting with them
+3. **Handle loading states** properly
+4. **Use helper functions** for common operations
+5. **Add proper assertions** to validate behavior
+6. **Handle errors gracefully** with try-catch blocks
+7. **Use environment variables** for configuration
+
+## 🎯 Test Goals
+
+These e2e tests ensure:
+
+1. **Functionality**: All project detail features work correctly
+2. **Data Integrity**: Information is properly populated from GitHub
+3. **User Experience**: Navigation and interactions are smooth
+4. **Reliability**: Features work consistently across different projects
+5. **Accessibility**: Basic accessibility features are functional
+6. **Error Handling**: Graceful handling of edge cases and errors
+
+## 📈 Continuous Integration
+
+These tests can be integrated into CI/CD pipelines:
+
+```yaml
+# Example GitHub Actions workflow
+- name: Run E2E Tests
+  run: |
+    cd e2e-tests
+    ./run-project-detail-tests.sh
+  env:
+    TEST_MAX_CARDS: 1
+```
+
+## 🤝 Contributing
+
+When adding new features to the project detail page:
+
+1. **Add corresponding tests** to the appropriate test suite
+2. **Update this README** with new test coverage
+3. **Ensure tests pass** before submitting changes
+4. **Follow existing patterns** for consistency
+
+## 📞 Support
+
+For issues with the e2e tests:
+
+1. Check the troubleshooting section above
+2. Review test logs and reports
+3. Run tests in debug mode for detailed investigation
+4. Ensure the development server is running correctly

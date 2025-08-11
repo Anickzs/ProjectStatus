@@ -97,6 +97,7 @@
         <div class="test-section">
             <h2>Test Controls</h2>
             <button onclick="testGitHubDataManager()">Test GitHub Data Manager</button>
+            <button onclick="clearSessionCache()">Clear Session Cache</button>
             <button onclick="clearResults()">Clear Results</button>
         </div>
         
@@ -192,6 +193,16 @@
         }
 
         // Local data manager test removed - only using GitHub data
+
+        function clearSessionCache() {
+            try {
+                sessionStorage.removeItem('githubProjectData');
+                addResult('Session cache cleared successfully', 'success');
+                addResult('Refresh the page or run the test again to fetch fresh data from GitHub', 'info');
+            } catch (error) {
+                addResult(`Failed to clear session cache: ${error.message}`, 'error');
+            }
+        }
 
         function displayProjectData(projects) {
             const container = document.getElementById('project-data');
